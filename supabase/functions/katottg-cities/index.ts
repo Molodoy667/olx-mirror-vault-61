@@ -27,6 +27,7 @@ let settlementsCache: FilteredCity[] = [];
 let regionsMap: Record<string, string> = {};
 let districtsMap: Record<string, string> = {};
 let dataLoaded = false;
+
 async function loadKatottgData() {
   if (dataLoaded && settlementsCache.length > 0) {
     return;
@@ -102,13 +103,6 @@ async function loadKatottgData() {
   }
 }
 
-function findParentName(parentCode: string, type: 'region' | 'district'): string {
-  // Backward-compat helper. Uses prepared maps from the loaded dataset
-  if (type === 'region') return regionsMap[parentCode] ?? '';
-  if (type === 'district') return districtsMap[parentCode] ?? '';
-  return '';
-}
-
 function searchCities(query: string, limit = 20): FilteredCity[] {
   const normalizedQuery = query.toLowerCase().trim();
   
@@ -123,6 +117,7 @@ function searchCities(query: string, limit = 20): FilteredCity[] {
         district: '',
         fullName: `${regionName} область`
       }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'uk'))
       .slice(0, limit);
   }
 
@@ -169,7 +164,7 @@ function searchCities(query: string, limit = 20): FilteredCity[] {
     }
   });
 
-  // Сортуємо результати з пріоритетом
+  // Сортуємо результати з пріоритетом як в тестовой версии
   return results
     .sort((a, b) => {
       // Exact name matches first
@@ -178,7 +173,7 @@ function searchCities(query: string, limit = 20): FilteredCity[] {
       if (aExact && !bExact) return -1;
       if (!aExact && bExact) return 1;
       
-      // Priority by type: regions > districts > big cities > cities > towns > villages
+      // Priority by type - ИМЕННО ТАК КАК В ТЕСТОВОЙ ВЕРСИИ
       const getTypePriority = (type: string) => {
         switch(type) {
           case 'обл.': return 1; // области
@@ -222,9 +217,6 @@ serve(async (req) => {
     const cities = searchCities(query || '', 20);
 
     console.log(`KATOTTG Edge Function: Found ${cities.length} results for query: "${query}"`);
-    console.log('First 3 results:', cities.slice(0, 3));
-
-    console.log(`Found ${cities.length} cities for query: ${query}`);
 
     return new Response(JSON.stringify({ cities }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
