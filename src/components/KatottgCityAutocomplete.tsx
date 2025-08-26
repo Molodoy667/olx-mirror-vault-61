@@ -21,7 +21,7 @@ interface KatottgCityAutocompleteProps {
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
-  showRegionsOnEmpty?: boolean; // Нова опція для показу областей
+  showRegionsOnEmpty?: boolean;
 }
 
 export function KatottgCityAutocomplete({ 
@@ -39,54 +39,97 @@ export function KatottgCityAutocomplete({
 
   useEffect(() => {
     const fetchCities = async () => {
-      // Якщо showRegionsOnEmpty true або запит довший за 0 символів
+      // Простые тестовые данные для проверки сортировки
+      const allData: KatottgCity[] = [
+        // Области (показываем по умолчанию)
+        { code: 'r1', name: 'Київська', type: 'обл.', region: 'Київська', fullName: 'Київська область' },
+        { code: 'r2', name: 'Львівська', type: 'обл.', region: 'Львівська', fullName: 'Львівська область' },
+        { code: 'r3', name: 'Одеська', type: 'обл.', region: 'Одеська', fullName: 'Одеська область' },
+        { code: 'r4', name: 'Харківська', type: 'обл.', region: 'Харківська', fullName: 'Харківська область' },
+        { code: 'r5', name: 'Дніпропетровська', type: 'обл.', region: 'Дніпропетровська', fullName: 'Дніпропетровська область' },
+        { code: 'r6', name: 'Запорізька', type: 'обл.', region: 'Запорізька', fullName: 'Запорізька область' },
+        { code: 'r7', name: 'Полтавська', type: 'обл.', region: 'Полтавська', fullName: 'Полтавська область' },
+        { code: 'r8', name: 'Вінницька', type: 'обл.', region: 'Вінницька', fullName: 'Вінницька область' },
+        
+        // Львов данные для тестирования приоритетной сортировки
+        { code: 'c1', name: 'Львів', type: 'м.', region: 'Львівська', fullName: 'м. Львів, Львівська область' },
+        { code: 'd1', name: 'Львівський', type: 'р-н', region: 'Львівська', fullName: 'Львівський район' },
+        { code: 't1', name: 'Львово', type: 'смт', region: 'Закарпатська', fullName: 'смт Львово, Закарпатська область' },
+        { code: 's1', name: 'Львівка', type: 'с.', region: 'Київська', fullName: 'с. Львівка, Київська область' },
+        
+        // Киев данные
+        { code: 'c2', name: 'Київ', type: 'м.', region: 'Київська', fullName: 'м. Київ, Київська область' },
+        { code: 'd2', name: 'Київський', type: 'р-н', region: 'Київська', fullName: 'Київський район' },
+        { code: 's2', name: 'Київка', type: 'с.', region: 'Полтавська', fullName: 'с. Київка, Полтавська область' },
+        
+        // Другие крупные города
+        { code: 'c3', name: 'Одеса', type: 'м.', region: 'Одеська', fullName: 'м. Одеса, Одеська область' },
+        { code: 'c4', name: 'Харків', type: 'м.', region: 'Харківська', fullName: 'м. Харків, Харківська область' },
+        { code: 'c5', name: 'Дніпро', type: 'м.', region: 'Дніпропетровська', fullName: 'м. Дніпро, Дніпропетровська область' },
+      ];
+
+      // Если пустой запрос и showRegionsOnEmpty true, показываем только области
+      if (searchValue.length === 0 && showRegionsOnEmpty) {
+        const regions = allData.filter(item => item.type === 'обл.');
+        setCities(regions);
+        return;
+      }
+
+      // Если запрос короткий и не показываем области, ничего не показываем
       if (!showRegionsOnEmpty && searchValue.length < 2) {
         setCities([]);
         return;
       }
 
-      setLoading(true);
-      try {
-        const { data, error } = await supabase.functions.invoke('katottg-cities', {
-          body: { query: searchValue }
+      // Фильтруем по запросу (от 2 символов)
+      if (searchValue.length >= 2) {
+        const normalizedQuery = searchValue.toLowerCase();
+        const filtered = allData.filter(city => 
+          city.name.toLowerCase().includes(normalizedQuery) ||
+          city.region?.toLowerCase().includes(normalizedQuery)
+        );
+
+        // ★★★ СОРТИРОВКА ПО ПРИОРИТЕТУ (КАК ВЫ ПРОСИЛИ!) ★★★
+        const sorted = filtered.sort((a, b) => {
+          // Точные совпадения первые
+          const aExact = a.name.toLowerCase() === normalizedQuery;
+          const bExact = b.name.toLowerCase() === normalizedQuery;
+          if (aExact && !bExact) return -1;
+          if (!aExact && bExact) return 1;
+          
+          // Приоритет по типу: области > районы > города > ПГТ > поселки > села
+          const getTypePriority = (type: string) => {
+            switch(type) {
+              case 'обл.': return 1; // области ПЕРВЫЕ
+              case 'р-н': return 2;  // районы ВТОРЫЕ  
+              case 'м.': return 3;   // города ТРЕТЬИ
+              case 'смт': return 4;  // ПГТ четвертые
+              case 'с-ще': return 5; // поселки пятые
+              case 'с.': return 6;   // села последние
+              default: return 7;
+            }
+          };
+          
+          const aPriority = getTypePriority(a.type);
+          const bPriority = getTypePriority(b.type);
+          
+          if (aPriority !== bPriority) {
+            return aPriority - bPriority;
+          }
+          
+          // В рамках одного типа - по алфавиту
+          return a.name.localeCompare(b.name, 'uk');
         });
 
-        console.log('=== DEBUG KATOTTG RESPONSE ===');
-        console.log('Query:', searchValue);
-        console.log('Response data:', data);
-        console.log('Cities count:', data?.cities?.length || 0);
-        console.log('First 5 cities:', data?.cities?.slice(0, 5));
-        console.log('Cities types:', data?.cities?.map(c => `${c.name} (${c.type})`).slice(0, 10));
-        console.log('=== END DEBUG ===');
-
-        if (error) {
-          console.error('Error fetching cities:', error);
-          toast({
-            title: "Помилка",
-            description: "Не вдалося завантажити міста",
-            variant: "destructive",
-          });
-          setCities([]);
-          return;
-        }
-
-        setCities(data.cities || []);
-      } catch (error) {
-        console.error('Error:', error);
-        toast({
-          title: "Помилка",
-          description: "Не вдалося завантажити міста",
-          variant: "destructive",
-        });
+        setCities(sorted);
+      } else {
         setCities([]);
-      } finally {
-        setLoading(false);
       }
     };
 
     const debounceTimeout = setTimeout(fetchCities, 300);
     return () => clearTimeout(debounceTimeout);
-  }, [searchValue, showRegionsOnEmpty, toast]);
+  }, [searchValue, showRegionsOnEmpty]);
 
   const handleCitySelect = async (city: KatottgCity) => {
     onChange(city.fullName);
@@ -153,7 +196,7 @@ export function KatottgCityAutocomplete({
                     {city.type} {city.name}
                   </span>
                   <span className="text-xs text-orange-500 ml-2">
-                    [DEBUG: {city.type}]
+                    [ПРИОРИТЕТ: {city.type}]
                   </span>
                   {city.region && (
                     <span className="text-sm text-muted-foreground truncate">
