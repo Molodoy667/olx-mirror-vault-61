@@ -178,10 +178,21 @@ function searchCities(query: string, limit = 20): FilteredCity[] {
       if (aExact && !bExact) return -1;
       if (!aExact && bExact) return 1;
       
-      // Priority by type: regions > districts > cities > towns > villages
-      const typePriority = { 'обл.': 0, 'р-н': 1, 'м.': 2, 'смт': 3, 'с-ще': 4, 'с.': 5 };
-      const aPriority = typePriority[a.type as keyof typeof typePriority] || 6;
-      const bPriority = typePriority[b.type as keyof typeof typePriority] || 6;
+      // Priority by type: regions > districts > big cities > cities > towns > villages
+      const getTypePriority = (type: string) => {
+        switch(type) {
+          case 'обл.': return 1; // области
+          case 'р-н': return 2;  // районы
+          case 'м.': return 3;   // города
+          case 'смт': return 4;  // пгт
+          case 'с-ще': return 5; // поселки
+          case 'с.': return 6;   // села
+          default: return 7;
+        }
+      };
+      
+      const aPriority = getTypePriority(a.type);
+      const bPriority = getTypePriority(b.type);
       
       if (aPriority !== bPriority) {
         return aPriority - bPriority;

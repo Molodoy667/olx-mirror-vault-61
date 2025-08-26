@@ -29,7 +29,7 @@ export function KatottgCityAutocomplete({
   onChange, 
   placeholder = "Оберіть місто...",
   className,
-  showRegionsOnEmpty = false
+  showRegionsOnEmpty = true  // По умолчанию показываем области
 }: KatottgCityAutocompleteProps) {
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState('');
