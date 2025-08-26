@@ -274,4 +274,125 @@ All colors MUST be HSL.
   .animate-toast-slide-out {
     animation: toast-slide-out 0.3s ease-out forwards;
   }
+
+  /* Mobile-specific styles */
+  @media (max-width: 768px) {
+    /* Safe area for mobile devices */
+    .safe-area-top {
+      padding-top: env(safe-area-inset-top);
+    }
+    
+    .safe-area-bottom {
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    
+    .safe-area-left {
+      padding-left: env(safe-area-inset-left);
+    }
+    
+    .safe-area-right {
+      padding-right: env(safe-area-inset-right);
+    }
+
+    /* Mobile touch targets */
+    .touch-target {
+      min-height: 44px;
+      min-width: 44px;
+    }
+
+    /* Mobile-specific shadows */
+    .shadow-mobile {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Mobile navigation spacing */
+    .mobile-nav-spacing {
+      padding-bottom: 4rem;
+    }
+
+    /* Mobile card styles */
+    .mobile-card {
+      border-radius: 0.75rem;
+      margin: 0.5rem;
+    }
+
+    /* Mobile button styles */
+    .mobile-button {
+      height: 48px;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    /* Mobile input styles */
+    .mobile-input {
+      height: 48px;
+      font-size: 16px; /* Prevents zoom on iOS */
+    }
+
+    /* Mobile modal styles */
+    .mobile-modal {
+      border-radius: 1rem 1rem 0 0;
+      margin-top: auto;
+    }
+  }
+
+  /* Tablet styles */
+  @media (min-width: 769px) and (max-width: 1024px) {
+    .tablet-container {
+      max-width: 90%;
+      margin: 0 auto;
+    }
+  }
+
+  /* Desktop styles */
+  @media (min-width: 1025px) {
+    .desktop-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+  }
+
+  /* High DPI displays */
+  @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .retina-image {
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: crisp-edges;
+    }
+  }
+
+  /* Dark mode support */
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --background: 222 84% 4.9%;
+      --foreground: 210 20% 98%;
+      --card: 222 84% 4.9%;
+      --card-foreground: 210 20% 98%;
+      --popover: 222 84% 4.9%;
+      --popover-foreground: 210 20% 98%;
+      --primary: 180 100% 35%;
+      --primary-foreground: 0 0% 100%;
+      --secondary: 217 32% 17%;
+      --secondary-foreground: 210 20% 98%;
+      --muted: 217 32% 17%;
+      --muted-foreground: 215 20% 65%;
+      --accent: 217 32% 17%;
+      --accent-foreground: 210 20% 98%;
+      --destructive: 0 62% 30%;
+      --destructive-foreground: 210 20% 98%;
+      --border: 217 32% 17%;
+      --input: 217 32% 17%;
+      --ring: 180 100% 35%;
+    }
+  }
+
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 }
