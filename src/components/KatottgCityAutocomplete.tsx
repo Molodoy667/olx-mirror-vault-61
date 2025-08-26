@@ -39,7 +39,7 @@ export function KatottgCityAutocomplete({
 
   useEffect(() => {
     const fetchCities = async () => {
-      // Якщо showRegionsOnEmpty false і запит короткий, не робимо запит
+      // Якщо showRegionsOnEmpty true або запит довший за 0 символів
       if (!showRegionsOnEmpty && searchValue.length < 2) {
         setCities([]);
         return;

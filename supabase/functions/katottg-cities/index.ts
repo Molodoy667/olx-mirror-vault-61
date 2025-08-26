@@ -130,12 +130,47 @@ function searchCities(query: string, limit = 20): FilteredCity[] {
     return [];
   }
 
-  const results: FilteredCity[] = settlementsCache
-    .filter((s) =>
-      s.name.toLowerCase().includes(normalizedQuery) ||
-      (s.region?.toLowerCase().includes(normalizedQuery)) ||
-      (s.district?.toLowerCase().includes(normalizedQuery))
-    )
+  const results: FilteredCity[] = [];
+  
+  // Додаємо області що підходять під запит
+  Object.values(regionsMap).forEach(regionName => {
+    if (regionName.toLowerCase().includes(normalizedQuery)) {
+      results.push({
+        code: `region_${regionName}`,
+        name: regionName,
+        type: 'обл.',
+        region: regionName,
+        district: '',
+        fullName: `${regionName} область`
+      });
+    }
+  });
+
+  // Додаємо райони що підходять під запит
+  Object.values(districtsMap).forEach(districtName => {
+    if (districtName.toLowerCase().includes(normalizedQuery)) {
+      results.push({
+        code: `district_${districtName}`,
+        name: districtName,
+        type: 'р-н',
+        region: '',
+        district: districtName,
+        fullName: `${districtName} район`
+      });
+    }
+  });
+
+  // Додаємо населені пункти
+  settlementsCache.forEach((s) => {
+    if (s.name.toLowerCase().includes(normalizedQuery) ||
+        (s.region?.toLowerCase().includes(normalizedQuery)) ||
+        (s.district?.toLowerCase().includes(normalizedQuery))) {
+      results.push(s);
+    }
+  });
+
+  // Сортуємо результати з пріоритетом
+  return results
     .sort((a, b) => {
       // Exact name matches first
       const aExact = a.name.toLowerCase() === normalizedQuery;
@@ -143,10 +178,10 @@ function searchCities(query: string, limit = 20): FilteredCity[] {
       if (aExact && !bExact) return -1;
       if (!aExact && bExact) return 1;
       
-      // Priority by settlement type: cities > towns > villages
-      const typePriority = { 'м.': 1, 'смт': 2, 'с-ще': 3, 'с.': 4 };
-      const aPriority = typePriority[a.type as keyof typeof typePriority] || 5;
-      const bPriority = typePriority[b.type as keyof typeof typePriority] || 5;
+      // Priority by type: regions > districts > cities > towns > villages
+      const typePriority = { 'обл.': 0, 'р-н': 1, 'м.': 2, 'смт': 3, 'с-ще': 4, 'с.': 5 };
+      const aPriority = typePriority[a.type as keyof typeof typePriority] || 6;
+      const bPriority = typePriority[b.type as keyof typeof typePriority] || 6;
       
       if (aPriority !== bPriority) {
         return aPriority - bPriority;
@@ -156,8 +191,6 @@ function searchCities(query: string, limit = 20): FilteredCity[] {
       return a.name.localeCompare(b.name, 'uk');
     })
     .slice(0, limit);
-
-  return results;
 }
 
 serve(async (req) => {
@@ -169,17 +202,11 @@ serve(async (req) => {
   try {
     const { query } = await req.json();
     
-    if (!query || query.length < 2) {
-      return new Response(JSON.stringify({ cities: [] }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
     // Загружаем данные КАТОТТГ если еще не загружены
     await loadKatottgData();
 
-    // Ищем города
-    const cities = searchCities(query, 20);
+    // Ищем города (включая области и районы)
+    const cities = searchCities(query || '', 20);
 
     console.log(`Found ${cities.length} cities for query: ${query}`);
 
