@@ -530,4 +530,4 @@ export default function SQLManager() {
       </div>
     </div>
   );
-}
+}// Force Vercel rebuild
