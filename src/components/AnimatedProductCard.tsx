@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { BusinessProfileBadge } from "@/components/BusinessProfileBadge";
 import { OptimizedImage } from "@/components/OptimizedImage";
+import { generateListingUrl } from "@/lib/seo";
 
 interface AnimatedProductCardProps {
   id: string;
@@ -160,6 +161,14 @@ export const AnimatedProductCard = ({
     }
   };
 
+  const handleCardClick = () => {
+    if (isLoading) return;
+    
+    // Используем SEO-friendly URL
+    const seoUrl = generateListingUrl(title, id);
+    navigate(seoUrl);
+  };
+
   return (
     <Card 
       className={cn(
@@ -168,10 +177,7 @@ export const AnimatedProductCard = ({
         "hover:shadow-elevated hover:-translate-y-1",
         "animate-fade-in"
       )}
-      onClick={() => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        navigate(`/listing/${id}`);
-      }}
+      onClick={handleCardClick}
     >
       <div className="relative aspect-[4/3] overflow-hidden bg-muted">
         <img

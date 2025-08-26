@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
@@ -7,7 +7,7 @@ import { ImageGallery } from '@/components/ImageGallery';
 import { SimilarListings } from '@/components/SimilarListings';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { ReviewsSection } from '@/components/listing/ReviewsSection';
 import { QuestionsSection } from '@/components/listing/QuestionsSection';
 import { ListingHeader } from '@/components/listing/ListingHeader';
@@ -16,17 +16,38 @@ import { ListingDetails } from '@/components/listing/ListingDetails';
 import { ListingSidebar } from '@/components/listing/ListingSidebar';
 import { AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { extractListingIdFromUrl, isSeoUrl } from '@/lib/seo';
+import { SeoRedirect } from '@/components/SeoRedirect';
 
 export default function ListingDetail() {
-  const { id } = useParams();
+  const { id, slug } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
 
+  // Определяем ID объявления из URL
+  const listingId = useMemo(() => {
+    if (id) return id; // Старый формат /listing/:id
+    if (slug && isSeoUrl(location.pathname)) {
+      return extractListingIdFromUrl(location.pathname); // SEO формат /:slug
+    }
+    return null;
+  }, [id, slug, location.pathname]);
+
+  // Если не удалось определить ID, перенаправляем на 404
+  useEffect(() => {
+    if (!listingId) {
+      navigate('/404', { replace: true });
+    }
+  }, [listingId, navigate]);
+
   const { data: listing, isLoading } = useQuery({
-    queryKey: ['listing', id],
+    queryKey: ['listing', listingId],
     queryFn: async () => {
+      if (!listingId) throw new Error('Listing ID not found');
+
       const { data, error } = await supabase
         .from('listings')
         .select(`
@@ -36,27 +57,28 @@ export default function ListingDetail() {
             name_uk
           )
         `)
-        .eq('id', id)
+        .eq('id', listingId)
         .single();
 
       if (error) throw error;
       
       // Increment views only once per session
-      if (!sessionStorage.getItem(`viewed-${id}`)) {
+      if (!sessionStorage.getItem(`viewed-${listingId}`)) {
         await supabase
           .from('listings')
           .update({ views: (data.views || 0) + 1 })
-          .eq('id', id);
+          .eq('id', listingId);
         
-        sessionStorage.setItem(`viewed-${id}`, 'true');
+        sessionStorage.setItem(`viewed-${listingId}`, 'true');
       }
 
       return data;
     },
+    enabled: !!listingId,
   });
 
   const { data: favorites } = useQuery({
-    queryKey: ['favorites', id, user?.id],
+    queryKey: ['favorites', listingId, user?.id],
     queryFn: async () => {
       if (!user) return [];
       
@@ -64,13 +86,13 @@ export default function ListingDetail() {
         .from('favorites')
         .select('*')
         .eq('user_id', user.id)
-        .eq('listing_id', id!);
+        .eq('listing_id', listingId!);
 
       if (error) throw error;
       setIsFavorite(data.length > 0);
       return data;
     },
-    enabled: !!user && !!id,
+    enabled: !!user && !!listingId,
   });
 
   const handleToggleFavorite = async () => {
@@ -89,7 +111,7 @@ export default function ListingDetail() {
           .from('favorites')
           .delete()
           .eq('user_id', user.id)
-          .eq('listing_id', id!);
+          .eq('listing_id', listingId!);
         
         setIsFavorite(false);
         toast({
@@ -98,7 +120,7 @@ export default function ListingDetail() {
       } else {
         await supabase
           .from('favorites')
-          .insert({ user_id: user.id, listing_id: id });
+          .insert({ user_id: user.id, listing_id: listingId });
         
         setIsFavorite(true);
         toast({
@@ -133,7 +155,7 @@ export default function ListingDetail() {
           sender_id: user.id,
           receiver_id: listing?.user_id,
           content: `Вітаю! Мене цікавить ваше оголошення "${listing?.title}"`,
-          listing_id: id,
+          listing_id: listingId,
         });
       
       // Navigate to messages with listing context
@@ -195,6 +217,9 @@ export default function ListingDetail() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-accent/5">
       <Header />
+      
+      {/* SEO Redirect для старых URL */}
+      {listing && <SeoRedirect listingId={listing.id} title={listing.title} />}
       
       <div className="container mx-auto px-4 py-8">
         {/* Breadcrumbs */}

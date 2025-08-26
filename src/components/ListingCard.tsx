@@ -9,6 +9,7 @@ import { useListingLikes } from "@/hooks/useListingLikes";
 import { useListingStats } from "@/hooks/useListingStats";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
+import { generateListingUrl } from "@/lib/seo";
 
 interface ListingCardProps {
   id: string;
@@ -55,7 +56,9 @@ export const ListingCard = ({
     if ((e.target as HTMLElement).closest('button')) {
       return;
     }
-    navigate(`/listing/${id}`);
+    // Используем SEO-friendly URL
+    const seoUrl = generateListingUrl(title, id);
+    navigate(seoUrl);
   };
 
   const handleLikeClick = (e: React.MouseEvent) => {
