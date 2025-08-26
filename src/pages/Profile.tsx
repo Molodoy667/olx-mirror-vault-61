@@ -1,0 +1,235 @@
+import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { Header } from '@/components/Header';
+import { Footer } from '@/components/Footer';
+import { ProductCardNew } from '@/components/ProductCardNew';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useAuth } from '@/hooks/useAuth';
+import { useAdmin } from '@/hooks/useAdmin';
+import { User, MapPin, Calendar, Package, Heart, Settings, Shield } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import { BusinessUpgradeDialog } from '@/components/BusinessUpgradeDialog';
+import { VIPPromotionDialog } from '@/components/VIPPromotionDialog';
+
+export default function Profile() {
+  const { id } = useParams();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const isOwnProfile = user?.id === id;
+  const { isAdmin } = useAdmin();
+
+  const { data: profile } = useQuery({
+    queryKey: ['profile', id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: listings } = useQuery({
+    queryKey: ['user-listings', id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('listings')
+        .select('*')
+        .eq('user_id', id)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: favorites } = useQuery({
+    queryKey: ['user-favorites', id],
+    queryFn: async () => {
+      if (!isOwnProfile) return [];
+      
+      const { data, error } = await supabase
+        .from('favorites')
+        .select(`
+          *,
+          listings (
+            id,
+            title,
+            price,
+            currency,
+            location,
+            images,
+            is_promoted,
+            created_at
+          )
+        `)
+        .eq('user_id', id);
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: isOwnProfile,
+  });
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Header />
+      
+      <div className="container mx-auto px-4 py-8">
+        {/* Profile Header */}
+        <div className="bg-card rounded-lg p-6 mb-6">
+          <div className="flex items-start gap-6">
+            <div className="w-24 h-24 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+              {profile?.avatar_url ? (
+                <img 
+                  src={profile.avatar_url} 
+                  alt="" 
+                  className="w-full h-full rounded-full object-cover"
+                />
+              ) : (
+                <User className="w-12 h-12 text-muted-foreground" />
+              )}
+            </div>
+            
+            <div className="flex-1">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold mb-2">
+                    {profile?.full_name || profile?.username || 'Користувач'}
+                  </h1>
+                  
+                  <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                    {profile?.location && (
+                      <div className="flex items-center gap-1">
+                        <MapPin className="w-4 h-4" />
+                        {profile.location}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-1">
+                      <Calendar className="w-4 h-4" />
+                      На Novado з {profile?.created_at && new Date(profile.created_at).getFullYear()}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Package className="w-4 h-4" />
+                      {listings?.length || 0} оголошень
+                    </div>
+                  </div>
+                </div>
+                
+                {isOwnProfile && (
+                  <div className="flex gap-2">
+                    {isAdmin && (
+                      <Button 
+                        variant="default" 
+                        size="sm"
+                        onClick={() => navigate('/admin')}
+                        className="bg-gradient-to-r from-primary to-primary-dark"
+                      >
+                        <Shield className="w-4 h-4 mr-2" />
+                        Адмін панель
+                      </Button>
+                    )}
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => navigate('/edit-profile')}
+                    >
+                      <Settings className="w-4 h-4 mr-2" />
+                      Редагувати
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          {/* Business Upgrade Section */}
+          {isOwnProfile && (
+            <div className="mt-6">
+              <BusinessUpgradeDialog />
+            </div>
+          )}
+        </div>
+
+        {/* Tabs */}
+        <Tabs defaultValue="listings" className="space-y-6">
+          <TabsList className="w-full justify-start">
+            <TabsTrigger value="listings">
+              <Package className="w-4 h-4 mr-2" />
+              Оголошення ({listings?.length || 0})
+            </TabsTrigger>
+            {isOwnProfile && (
+              <TabsTrigger value="favorites">
+                <Heart className="w-4 h-4 mr-2" />
+                Обране ({favorites?.length || 0})
+              </TabsTrigger>
+            )}
+          </TabsList>
+
+          <TabsContent value="listings">
+            {listings && listings.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {listings.map((listing) => (
+                  <ProductCardNew
+                    key={listing.id}
+                    id={listing.id}
+                    title={listing.title}
+                    price={listing.price || 0}
+                    currency={listing.currency}
+                    location={listing.location}
+                    image={listing.images?.[0] || '/placeholder.svg'}
+                    isPromoted={listing.is_promoted}
+                    createdAt={listing.created_at}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 bg-card rounded-lg">
+                <Package className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">
+                  {isOwnProfile ? 'У вас ще немає оголошень' : 'Користувач ще не має оголошень'}
+                </p>
+              </div>
+            )}
+          </TabsContent>
+
+          {isOwnProfile && (
+            <TabsContent value="favorites">
+              {favorites && favorites.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {favorites.map((fav) => fav.listings && (
+                    <ProductCardNew
+                      key={fav.listings.id}
+                      id={fav.listings.id}
+                      title={fav.listings.title}
+                      price={fav.listings.price || 0}
+                      currency={fav.listings.currency}
+                      location={fav.listings.location}
+                      image={fav.listings.images?.[0] || '/placeholder.svg'}
+                      isPromoted={fav.listings.is_promoted}
+                      createdAt={fav.listings.created_at}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 bg-card rounded-lg">
+                  <Heart className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">У вас ще немає обраних оголошень</p>
+                </div>
+              )}
+            </TabsContent>
+          )}
+        </Tabs>
+      </div>
+
+      <Footer />
+    </div>
+  );
+}
