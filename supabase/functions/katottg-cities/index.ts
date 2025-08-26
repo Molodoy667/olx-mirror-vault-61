@@ -137,11 +137,22 @@ function searchCities(query: string, limit = 20): FilteredCity[] {
       (s.district?.toLowerCase().includes(normalizedQuery))
     )
     .sort((a, b) => {
-      // Exact name matches first, then alphabetically
+      // Exact name matches first
       const aExact = a.name.toLowerCase() === normalizedQuery;
       const bExact = b.name.toLowerCase() === normalizedQuery;
       if (aExact && !bExact) return -1;
       if (!aExact && bExact) return 1;
+      
+      // Priority by settlement type: cities > towns > villages
+      const typePriority = { 'м.': 1, 'смт': 2, 'с-ще': 3, 'с.': 4 };
+      const aPriority = typePriority[a.type as keyof typeof typePriority] || 5;
+      const bPriority = typePriority[b.type as keyof typeof typePriority] || 5;
+      
+      if (aPriority !== bPriority) {
+        return aPriority - bPriority;
+      }
+      
+      // Within same type, alphabetically
       return a.name.localeCompare(b.name, 'uk');
     })
     .slice(0, limit);
