@@ -2,6 +2,8 @@
  * SEO utilities for generating friendly URLs
  */
 
+import { supabase } from '@/integrations/supabase/client';
+
 // Транслитерация кириллицы в латиницу
 const transliterationMap: Record<string, string> = {
   'а': 'a', 'б': 'b', 'в': 'v', 'г': 'h', 'ґ': 'g', 'д': 'd', 'е': 'e', 'є': 'ye',
@@ -57,7 +59,89 @@ export function generateRandomId(): string {
 }
 
 /**
- * Генерирует полный SEO-friendly URL для объявления
+ * Создает или получает SEO URL для объявления
+ */
+export async function getOrCreateSeoUrl(listingId: string, title: string): Promise<string> {
+  try {
+    // Сначала пытаемся найти существующий SEO URL
+    const { data: existingUrl } = await supabase
+      .from('seo_urls')
+      .select('full_url')
+      .eq('listing_id', listingId)
+      .single();
+
+    if (existingUrl) {
+      return existingUrl.full_url;
+    }
+
+    // Если SEO URL не существует, создаем новый
+    const slug = generateSlug(title);
+    const seoId = generateRandomId();
+    const fullUrl = `/${slug}-${seoId}`;
+
+    // Сохраняем в базу данных
+    const { error } = await supabase
+      .from('seo_urls')
+      .insert({
+        listing_id: listingId,
+        slug,
+        seo_id: seoId,
+        full_url: fullUrl
+      });
+
+    if (error) {
+      console.error('Error creating SEO URL:', error);
+      // В случае ошибки возвращаем старый формат
+      return `/listing/${listingId}`;
+    }
+
+    return fullUrl;
+  } catch (error) {
+    console.error('Error in getOrCreateSeoUrl:', error);
+    // В случае ошибки возвращаем старый формат
+    return `/listing/${listingId}`;
+  }
+}
+
+/**
+ * Получает SEO URL для объявления (без создания)
+ */
+export async function getSeoUrl(listingId: string): Promise<string | null> {
+  try {
+    const { data } = await supabase
+      .from('seo_urls')
+      .select('full_url')
+      .eq('listing_id', listingId)
+      .single();
+
+    return data?.full_url || null;
+  } catch (error) {
+    console.error('Error getting SEO URL:', error);
+    return null;
+  }
+}
+
+/**
+ * Получает ID объявления по SEO URL
+ */
+export async function getListingIdBySeoUrl(seoUrl: string): Promise<string | null> {
+  try {
+    const { data } = await supabase
+      .from('seo_urls')
+      .select('listing_id')
+      .eq('full_url', seoUrl)
+      .single();
+
+    return data?.listing_id || null;
+  } catch (error) {
+    console.error('Error getting listing ID by SEO URL:', error);
+    return null;
+  }
+}
+
+/**
+ * Генерирует полный SEO-friendly URL для объявления (устаревший метод)
+ * @deprecated Используйте getOrCreateSeoUrl
  */
 export function generateListingUrl(title: string, id: string): string {
   const slug = generateSlug(title);
@@ -66,7 +150,8 @@ export function generateListingUrl(title: string, id: string): string {
 }
 
 /**
- * Извлекает ID объявления из SEO-friendly URL
+ * Извлекает ID объявления из SEO-friendly URL (устаревший метод)
+ * @deprecated Используйте getListingIdBySeoUrl
  */
 export function extractListingIdFromUrl(url: string): string | null {
   // Ищем последние 6 символов после последнего дефиса

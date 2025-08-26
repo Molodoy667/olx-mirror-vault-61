@@ -15,7 +15,7 @@ import { MapPin, DollarSign, Package } from 'lucide-react';
 import { ImageUpload } from '@/components/ImageUpload';
 import { NovaPoshtaCityAutocomplete } from '@/components/NovaPoshtaCityAutocomplete';
 import { KatottgCityAutocomplete } from '@/components/KatottgCityAutocomplete';
-import { generateListingUrl } from "@/lib/seo";
+import { getOrCreateSeoUrl } from "@/lib/seo";
 
 export default function CreateListing() {
   const navigate = useNavigate();
@@ -77,8 +77,8 @@ export default function CreateListing() {
         description: "Оголошення створено",
       });
 
-      // Используем SEO-friendly URL
-      const seoUrl = generateListingUrl(data.title, data.id);
+      // Используем SEO-friendly URL из базы данных
+      const seoUrl = await getOrCreateSeoUrl(data.id, data.title);
       navigate(seoUrl);
     } catch (error: any) {
       toast({

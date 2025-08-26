@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { BusinessProfileBadge } from "@/components/BusinessProfileBadge";
 import { OptimizedImage } from "@/components/OptimizedImage";
-import { generateListingUrl } from "@/lib/seo";
+import { getOrCreateSeoUrl } from "@/lib/seo";
 
 interface AnimatedProductCardProps {
   id: string;
@@ -161,12 +161,18 @@ export const AnimatedProductCard = ({
     }
   };
 
-  const handleCardClick = () => {
+  const handleCardClick = async () => {
     if (isLoading) return;
     
-    // Используем SEO-friendly URL
-    const seoUrl = generateListingUrl(title, id);
-    navigate(seoUrl);
+    try {
+      // Используем SEO-friendly URL из базы данных
+      const seoUrl = await getOrCreateSeoUrl(id, title);
+      navigate(seoUrl);
+    } catch (error) {
+      console.error('Error navigating to listing:', error);
+      // В случае ошибки используем старый формат
+      navigate(`/listing/${id}`);
+    }
   };
 
   return (

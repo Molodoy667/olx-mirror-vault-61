@@ -16,7 +16,7 @@ import { ListingDetails } from '@/components/listing/ListingDetails';
 import { ListingSidebar } from '@/components/listing/ListingSidebar';
 import { AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { extractListingIdFromUrl, isSeoUrl } from '@/lib/seo';
+import { getListingIdBySeoUrl } from '@/lib/seo';
 import { SeoRedirect } from '@/components/SeoRedirect';
 
 export default function ListingDetail() {
@@ -30,23 +30,39 @@ export default function ListingDetail() {
   // Определяем ID объявления из URL
   const listingId = useMemo(() => {
     if (id) return id; // Старый формат /listing/:id
-    if (slug && isSeoUrl(location.pathname)) {
-      return extractListingIdFromUrl(location.pathname); // SEO формат /:slug
-    }
-    return null;
-  }, [id, slug, location.pathname]);
+    return null; // SEO формат будет обработан в useEffect
+  }, [id]);
+
+  // Обработка SEO URL
+  const { data: seoListingId, isLoading: seoLoading } = useQuery({
+    queryKey: ['seo-listing-id', location.pathname],
+    queryFn: async () => {
+      if (id) return null; // Если это старый формат, не ищем SEO ID
+      
+      // Проверяем, является ли это SEO URL
+      if (location.pathname.startsWith('/listing/')) return null;
+      
+      // Ищем ID объявления по SEO URL
+      const listingId = await getListingIdBySeoUrl(location.pathname);
+      return listingId;
+    },
+    enabled: !id && !location.pathname.startsWith('/listing/'),
+  });
+
+  // Финальный ID объявления
+  const finalListingId = listingId || seoListingId;
 
   // Если не удалось определить ID, перенаправляем на 404
   useEffect(() => {
-    if (!listingId) {
+    if (!seoLoading && !finalListingId && !id) {
       navigate('/404', { replace: true });
     }
-  }, [listingId, navigate]);
+  }, [finalListingId, seoLoading, id, navigate]);
 
   const { data: listing, isLoading } = useQuery({
-    queryKey: ['listing', listingId],
+    queryKey: ['listing', finalListingId],
     queryFn: async () => {
-      if (!listingId) throw new Error('Listing ID not found');
+      if (!finalListingId) throw new Error('Listing ID not found');
 
       const { data, error } = await supabase
         .from('listings')
@@ -57,28 +73,28 @@ export default function ListingDetail() {
             name_uk
           )
         `)
-        .eq('id', listingId)
+        .eq('id', finalListingId)
         .single();
 
       if (error) throw error;
       
       // Increment views only once per session
-      if (!sessionStorage.getItem(`viewed-${listingId}`)) {
+      if (!sessionStorage.getItem(`viewed-${finalListingId}`)) {
         await supabase
           .from('listings')
           .update({ views: (data.views || 0) + 1 })
-          .eq('id', listingId);
+          .eq('id', finalListingId);
         
-        sessionStorage.setItem(`viewed-${listingId}`, 'true');
+        sessionStorage.setItem(`viewed-${finalListingId}`, 'true');
       }
 
       return data;
     },
-    enabled: !!listingId,
+    enabled: !!finalListingId,
   });
 
   const { data: favorites } = useQuery({
-    queryKey: ['favorites', listingId, user?.id],
+    queryKey: ['favorites', finalListingId, user?.id],
     queryFn: async () => {
       if (!user) return [];
       
@@ -86,13 +102,13 @@ export default function ListingDetail() {
         .from('favorites')
         .select('*')
         .eq('user_id', user.id)
-        .eq('listing_id', listingId!);
+        .eq('listing_id', finalListingId!);
 
       if (error) throw error;
       setIsFavorite(data.length > 0);
       return data;
     },
-    enabled: !!user && !!listingId,
+    enabled: !!user && !!finalListingId,
   });
 
   const handleToggleFavorite = async () => {
@@ -111,7 +127,7 @@ export default function ListingDetail() {
           .from('favorites')
           .delete()
           .eq('user_id', user.id)
-          .eq('listing_id', listingId!);
+          .eq('listing_id', finalListingId!);
         
         setIsFavorite(false);
         toast({
@@ -120,7 +136,7 @@ export default function ListingDetail() {
       } else {
         await supabase
           .from('favorites')
-          .insert({ user_id: user.id, listing_id: listingId });
+          .insert({ user_id: user.id, listing_id: finalListingId });
         
         setIsFavorite(true);
         toast({
@@ -155,7 +171,7 @@ export default function ListingDetail() {
           sender_id: user.id,
           receiver_id: listing?.user_id,
           content: `Вітаю! Мене цікавить ваше оголошення "${listing?.title}"`,
-          listing_id: listingId,
+          listing_id: finalListingId,
         });
       
       // Navigate to messages with listing context

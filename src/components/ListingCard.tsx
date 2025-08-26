@@ -9,7 +9,7 @@ import { useListingLikes } from "@/hooks/useListingLikes";
 import { useListingStats } from "@/hooks/useListingStats";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
-import { generateListingUrl } from "@/lib/seo";
+import { getOrCreateSeoUrl } from "@/lib/seo";
 
 interface ListingCardProps {
   id: string;
@@ -51,14 +51,21 @@ export const ListingCard = ({
   const { isLiked, likesCount, toggleLike, isLoading: likeLoading } = useListingLikes(id);
   const { recordContact } = useListingStats(id);
 
-  const handleCardClick = (e: React.MouseEvent) => {
+  const handleCardClick = async (e: React.MouseEvent) => {
     // Если клик по кнопкам, не переходим
     if ((e.target as HTMLElement).closest('button')) {
       return;
     }
-    // Используем SEO-friendly URL
-    const seoUrl = generateListingUrl(title, id);
-    navigate(seoUrl);
+    
+    try {
+      // Используем SEO-friendly URL из базы данных
+      const seoUrl = await getOrCreateSeoUrl(id, title);
+      navigate(seoUrl);
+    } catch (error) {
+      console.error('Error navigating to listing:', error);
+      // В случае ошибки используем старый формат
+      navigate(`/listing/${id}`);
+    }
   };
 
   const handleLikeClick = (e: React.MouseEvent) => {

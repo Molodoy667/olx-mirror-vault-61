@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { generateListingUrl, extractListingIdFromUrl } from '@/lib/seo';
+import { getOrCreateSeoUrl, getSeoUrl, getListingIdBySeoUrl } from '@/lib/seo';
 
 /**
  * Хук для работы с SEO-friendly URL объявлений
@@ -11,28 +11,42 @@ export function useSeoUrl() {
   /**
    * Переход к объявлению по SEO-friendly URL
    */
-  const navigateToListing = useCallback((title: string, id: string) => {
-    const seoUrl = generateListingUrl(title, id);
-    navigate(seoUrl);
+  const navigateToListing = useCallback(async (title: string, id: string) => {
+    try {
+      const seoUrl = await getOrCreateSeoUrl(id, title);
+      navigate(seoUrl);
+    } catch (error) {
+      console.error('Error navigating to listing:', error);
+      // В случае ошибки используем старый формат
+      navigate(`/listing/${id}`);
+    }
   }, [navigate]);
 
   /**
-   * Получение ID объявления из текущего URL
+   * Получение ID объявления из SEO URL
    */
-  const getListingIdFromUrl = useCallback((url: string) => {
-    return extractListingIdFromUrl(url);
+  const getListingIdFromSeoUrl = useCallback(async (seoUrl: string) => {
+    return await getListingIdBySeoUrl(seoUrl);
   }, []);
 
   /**
-   * Генерация SEO-friendly URL для объявления
+   * Получение SEO URL для объявления
    */
-  const generateUrl = useCallback((title: string, id: string) => {
-    return generateListingUrl(title, id);
+  const getSeoUrlForListing = useCallback(async (listingId: string) => {
+    return await getSeoUrl(listingId);
+  }, []);
+
+  /**
+   * Создание или получение SEO URL для объявления
+   */
+  const createOrGetSeoUrl = useCallback(async (listingId: string, title: string) => {
+    return await getOrCreateSeoUrl(listingId, title);
   }, []);
 
   return {
     navigateToListing,
-    getListingIdFromUrl,
-    generateUrl,
+    getListingIdFromSeoUrl,
+    getSeoUrlForListing,
+    createOrGetSeoUrl,
   };
 }
