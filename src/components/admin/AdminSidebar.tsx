@@ -10,13 +10,14 @@ import {
   FileText,
   DollarSign,
   Building,
-  Database
+  Database,
+  Archive
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const menuItems = [
   {
-    title: "Дашборд",
+    title: "Головна",
     icon: LayoutDashboard,
     href: "/admin"
   },
@@ -31,19 +32,19 @@ const menuItems = [
     href: "/admin/listings"
   },
   {
-    title: "Тарифи",
-    icon: DollarSign,
-    href: "/admin/tariffs"
-  },
-  {
-    title: "Верифікації",
+    title: "Категорії",
     icon: Building,
-    href: "/admin/business-verifications"
+    href: "/admin/categories"
   },
   {
-    title: "Аналітика",
+    title: "Статистика",
     icon: BarChart,
     href: "/admin/analytics"
+  },
+  {
+    title: "Модерація",
+    icon: Shield,
+    href: "/admin/moderation"
   },
   {
     title: "Повідомлення",
@@ -51,9 +52,9 @@ const menuItems = [
     href: "/admin/messages"
   },
   {
-    title: "Модерація",
-    icon: Shield,
-    href: "/admin/moderation"
+    title: "Фінанси",
+    icon: DollarSign,
+    href: "/admin/finance"
   },
   {
     title: "Звіти",
@@ -64,6 +65,11 @@ const menuItems = [
     title: "SQL Manager",
     icon: Database,
     href: "/admin/sql-manager"
+  },
+  {
+    title: "Бэкапи",
+    icon: Archive,
+    href: "/admin/backup-manager"
   },
   {
     title: "Налаштування",
