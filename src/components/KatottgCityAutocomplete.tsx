@@ -51,6 +51,14 @@ export function KatottgCityAutocomplete({
           body: { query: searchValue }
         });
 
+        console.log('=== DEBUG KATOTTG RESPONSE ===');
+        console.log('Query:', searchValue);
+        console.log('Response data:', data);
+        console.log('Cities count:', data?.cities?.length || 0);
+        console.log('First 5 cities:', data?.cities?.slice(0, 5));
+        console.log('Cities types:', data?.cities?.map(c => `${c.name} (${c.type})`).slice(0, 10));
+        console.log('=== END DEBUG ===');
+
         if (error) {
           console.error('Error fetching cities:', error);
           toast({
@@ -143,6 +151,9 @@ export function KatottgCityAutocomplete({
                 <div className="flex flex-col min-w-0 flex-1">
                   <span className="font-medium truncate">
                     {city.type} {city.name}
+                  </span>
+                  <span className="text-xs text-orange-500 ml-2">
+                    [DEBUG: {city.type}]
                   </span>
                   {city.region && (
                     <span className="text-sm text-muted-foreground truncate">
