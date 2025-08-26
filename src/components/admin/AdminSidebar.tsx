@@ -9,7 +9,8 @@ import {
   Shield,
   FileText,
   DollarSign,
-  Building
+  Building,
+  Database
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -58,6 +59,11 @@ const menuItems = [
     title: "Звіти",
     icon: FileText,
     href: "/admin/reports"
+  },
+  {
+    title: "SQL Manager",
+    icon: Database,
+    href: "/admin/sql-manager"
   },
   {
     title: "Налаштування",

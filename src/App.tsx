@@ -28,6 +28,7 @@ const AdminBusinessVerifications = lazy(() => import("./pages/admin/BusinessVeri
 const AdminMessages = lazy(() => import("./pages/admin/Messages"));
 const AdminSettings = lazy(() => import("./pages/admin/Settings"));
 const AdminModeration = lazy(() => import("./pages/admin/Moderation"));
+const SQLManager = lazy(() => import("./pages/admin/SQLManager"));
 const CategoryPage = lazy(() => import("./pages/CategoryPage"));
 const About = lazy(() => import("./pages/About"));
 const Help = lazy(() => import("./pages/Help"));
@@ -99,6 +100,7 @@ const App = () => (
               <Route path="/admin/messages" element={<AdminMessages />} />
               <Route path="/admin/settings" element={<AdminSettings />} />
               <Route path="/admin/moderation" element={<AdminModeration />} />
+              <Route path="/admin/sql-manager" element={<SQLManager />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
