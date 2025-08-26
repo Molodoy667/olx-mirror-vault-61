@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Novado</string>
+    <string name="title_activity_main">Novado</string>
+    <string name="package_name">com.novado.app</string>
+    <string name="custom_url_scheme">com.novado.app</string>
+</resources>
