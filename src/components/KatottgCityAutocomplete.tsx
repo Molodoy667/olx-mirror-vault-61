@@ -39,48 +39,81 @@ export function KatottgCityAutocomplete({
 
   useEffect(() => {
     const fetchCities = async () => {
-      // Якщо showRegionsOnEmpty true або запит довший за 0 символів
+      // Тестовые данные для проверки сортировки
+      const testData: KatottgCity[] = [
+        { code: 'test1', name: 'Львів', type: 'м.', region: 'Львівська', fullName: 'м. Львів, Львівська область' },
+        { code: 'test2', name: 'Львівка', type: 'с.', region: 'Київська', fullName: 'с. Львівка, Київська область' },
+        { code: 'test3', name: 'Львівська', type: 'обл.', region: 'Львівська', fullName: 'Львівська область' },
+        { code: 'test4', name: 'Львівський', type: 'р-н', region: 'Львівська', fullName: 'Львівський район' },
+        { code: 'test5', name: 'Львово', type: 'смт', region: 'Закарпатська', fullName: 'смт Львово, Закарпатська область' },
+      ];
+
+      // Если пустой запрос и showRegionsOnEmpty true, показываем области
+      if (searchValue.length === 0 && showRegionsOnEmpty) {
+        const regions: KatottgCity[] = [
+          { code: 'r1', name: 'Київська', type: 'обл.', region: 'Київська', fullName: 'Київська область' },
+          { code: 'r2', name: 'Львівська', type: 'обл.', region: 'Львівська', fullName: 'Львівська область' },
+          { code: 'r3', name: 'Одеська', type: 'обл.', region: 'Одеська', fullName: 'Одеська область' },
+          { code: 'r4', name: 'Харківська', type: 'обл.', region: 'Харківська', fullName: 'Харківська область' },
+        ];
+        setCities(regions);
+        return;
+      }
+
+      // Якщо showRegionsOnEmpty false і запит короткий, не робимо запит
       if (!showRegionsOnEmpty && searchValue.length < 2) {
         setCities([]);
         return;
       }
 
-      setLoading(true);
-      try {
-        console.log('KatottgCityAutocomplete: Making request with query:', searchValue, 'showRegionsOnEmpty:', showRegionsOnEmpty);
-        const { data, error } = await supabase.functions.invoke('katottg-cities', {
-          body: { query: searchValue }
+      // Фильтруем и сортируем тестовые данные
+      if (searchValue.length >= 2) {
+        const normalizedQuery = searchValue.toLowerCase();
+        const filtered = testData.filter(city => 
+          city.name.toLowerCase().includes(normalizedQuery) ||
+          city.region?.toLowerCase().includes(normalizedQuery)
+        );
+
+        // Сортировка по приоритету
+        const sorted = filtered.sort((a, b) => {
+          // Exact matches first
+          const aExact = a.name.toLowerCase() === normalizedQuery;
+          const bExact = b.name.toLowerCase() === normalizedQuery;
+          if (aExact && !bExact) return -1;
+          if (!aExact && bExact) return 1;
+          
+          // Priority by type
+          const getTypePriority = (type: string) => {
+            switch(type) {
+              case 'обл.': return 1;
+              case 'р-н': return 2;
+              case 'м.': return 3;
+              case 'смт': return 4;
+              case 'с-ще': return 5;
+              case 'с.': return 6;
+              default: return 7;
+            }
+          };
+          
+          const aPriority = getTypePriority(a.type);
+          const bPriority = getTypePriority(b.type);
+          
+          if (aPriority !== bPriority) {
+            return aPriority - bPriority;
+          }
+          
+          return a.name.localeCompare(b.name, 'uk');
         });
 
-        if (error) {
-          console.error('Error fetching cities:', error);
-          toast({
-            title: "Помилка",
-            description: "Не вдалося завантажити міста",
-            variant: "destructive",
-          });
-          setCities([]);
-          return;
-        }
-
-        console.log('KatottgCityAutocomplete: Received cities:', data.cities?.length || 0, 'cities');
-        setCities(data.cities || []);
-      } catch (error) {
-        console.error('Error:', error);
-        toast({
-          title: "Помилка",
-          description: "Не вдалося завантажити міста",
-          variant: "destructive",
-        });
+        setCities(sorted);
+      } else {
         setCities([]);
-      } finally {
-        setLoading(false);
       }
     };
 
     const debounceTimeout = setTimeout(fetchCities, 300);
     return () => clearTimeout(debounceTimeout);
-  }, [searchValue, toast]);
+  }, [searchValue, showRegionsOnEmpty]);
 
   const handleCitySelect = async (city: KatottgCity) => {
     onChange(city.fullName);
