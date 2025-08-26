@@ -47,17 +47,12 @@ export const CombinedInfoSection = () => {
     },
   ];
 
-  const popularSearches = [
-    "iPhone", "Samsung", "Квартира", "Авто", "Робота", "Ноутбук", 
-    "Одяг", "Меблі", "Телевізор", "Велосипед"
-  ];
-
   return (
     <section className="py-8 bg-gradient-to-br from-primary/5 to-accent/5">
       <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="flex justify-center">
           {/* Stats */}
-          <div className="bg-card rounded-lg p-6 border border-border/50">
+          <div className="bg-card rounded-lg p-6 border border-border/50 max-w-md">
             <h3 className="text-xl font-bold mb-4 text-center">Novado в цифрах</h3>
             <div className="grid grid-cols-3 gap-4">
               {statsData.map((stat, index) => (
@@ -68,22 +63,6 @@ export const CombinedInfoSection = () => {
                   <div className="text-lg font-bold">{stat.value}</div>
                   <div className="text-xs text-muted-foreground">{stat.label}</div>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Popular Searches */}
-          <div className="bg-card rounded-lg p-6 border border-border/50">
-            <h3 className="text-xl font-bold mb-4 text-center">Популярні запити</h3>
-            <div className="flex flex-wrap gap-2">
-              {popularSearches.map((search, index) => (
-                <Link
-                  key={index}
-                  to={`/search?q=${encodeURIComponent(search)}`}
-                  className="px-3 py-1 bg-muted hover:bg-primary/10 rounded-full text-sm transition-colors"
-                >
-                  {search}
-                </Link>
               ))}
             </div>
           </div>
