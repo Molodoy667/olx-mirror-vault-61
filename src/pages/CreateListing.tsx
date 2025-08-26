@@ -206,6 +206,7 @@ export default function CreateListing() {
                 onChange={(value) => setFormData({ ...formData, location: value })}
                 placeholder="Оберіть населений пункт..."
                 className="w-full"
+                showRegionsOnEmpty={true}
               />
             </div>
 

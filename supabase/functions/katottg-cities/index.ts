@@ -202,11 +202,16 @@ serve(async (req) => {
   try {
     const { query } = await req.json();
     
+    console.log('KATOTTG Edge Function: Received query:', query);
+    
     // Загружаем данные КАТОТТГ если еще не загружены
     await loadKatottgData();
 
     // Ищем города (включая области и районы)
     const cities = searchCities(query || '', 20);
+
+    console.log(`KATOTTG Edge Function: Found ${cities.length} results for query: "${query}"`);
+    console.log('First 3 results:', cities.slice(0, 3));
 
     console.log(`Found ${cities.length} cities for query: ${query}`);
 

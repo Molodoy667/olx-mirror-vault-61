@@ -47,6 +47,7 @@ export function KatottgCityAutocomplete({
 
       setLoading(true);
       try {
+        console.log('KatottgCityAutocomplete: Making request with query:', searchValue, 'showRegionsOnEmpty:', showRegionsOnEmpty);
         const { data, error } = await supabase.functions.invoke('katottg-cities', {
           body: { query: searchValue }
         });
@@ -62,6 +63,7 @@ export function KatottgCityAutocomplete({
           return;
         }
 
+        console.log('KatottgCityAutocomplete: Received cities:', data.cities?.length || 0, 'cities');
         setCities(data.cities || []);
       } catch (error) {
         console.error('Error:', error);
