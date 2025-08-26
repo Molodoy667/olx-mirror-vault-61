@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { useAdmin } from '@/hooks/useAdmin';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
-import { AdminHeader } from '@/components/AdminHeader';
+import { AdminHeader } from '@/components/admin/AdminHeader';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -50,13 +50,13 @@ export default function SQLManager() {
   const [selectedFile, setSelectedFile] = useState<SQLFile | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Проверка прав доступа
+  // Перевірка прав доступу
   if (adminLoading) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
         <div className="container mx-auto px-4 py-8">
-          <div className="text-center">Загрузка...</div>
+          <div className="text-center">Завантаження...</div>
         </div>
       </div>
     );
@@ -69,20 +69,20 @@ export default function SQLManager() {
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">
             <AlertCircle className="w-16 h-16 text-destructive mx-auto mb-4" />
-            <h2 className="text-2xl font-semibold mb-2">Доступ запрещен</h2>
-            <p className="text-muted-foreground">У вас нет прав для доступа к этой странице.</p>
+            <h2 className="text-2xl font-semibold mb-2">Доступ заборонено</h2>
+            <p className="text-muted-foreground">У вас немає прав для доступу до цієї сторінки.</p>
           </div>
         </div>
       </div>
     );
   }
 
-  // Выполнение SQL запроса
+  // Виконання SQL запиту
   const executeSQL = async () => {
     if (!sqlQuery.trim()) {
       toast({
-        title: "Ошибка",
-        description: "Введите SQL запрос",
+        title: "Помилка",
+        description: "Введіть SQL запит",
         variant: "destructive",
       });
       return;
@@ -92,7 +92,7 @@ export default function SQLManager() {
     const startTime = Date.now();
 
     try {
-      // Разбиваем SQL на отдельные запросы
+      // Розбиваємо SQL на окремі запити
       const queries = sqlQuery
         .split(';')
         .map(q => q.trim())
@@ -111,14 +111,14 @@ export default function SQLManager() {
           if (error) {
             newResults.push({
               success: false,
-              message: `Ошибка выполнения: ${query.substring(0, 50)}...`,
+              message: `Помилка виконання: ${query.substring(0, 50)}...`,
               error: error.message,
               executionTime: Date.now() - startTime
             });
           } else {
             newResults.push({
               success: true,
-              message: `Успешно выполнено: ${query.substring(0, 50)}...`,
+              message: `Успішно виконано: ${query.substring(0, 50)}...`,
               data,
               rowsAffected: count || 0,
               executionTime: Date.now() - startTime
@@ -127,7 +127,7 @@ export default function SQLManager() {
         } catch (err: any) {
           newResults.push({
             success: false,
-            message: `Ошибка выполнения: ${query.substring(0, 50)}...`,
+            message: `Помилка виконання: ${query.substring(0, 50)}...`,
             error: err.message,
             executionTime: Date.now() - startTime
           });
@@ -137,14 +137,14 @@ export default function SQLManager() {
       setResults(prev => [...newResults, ...prev]);
       
       toast({
-        title: "SQL выполнен",
-        description: `Выполнено ${newResults.filter(r => r.success).length} из ${newResults.length} запросов`,
+        title: "SQL виконано",
+        description: `Виконано ${newResults.filter(r => r.success).length} з ${newResults.length} запитів`,
       });
 
     } catch (error: any) {
       const result: SQLResult = {
         success: false,
-        message: "Критическая ошибка выполнения",
+        message: "Критична помилка виконання",
         error: error.message,
         executionTime: Date.now() - startTime
       };
@@ -152,7 +152,7 @@ export default function SQLManager() {
       setResults(prev => [result, ...prev]);
       
       toast({
-        title: "Ошибка",
+        title: "Помилка",
         description: error.message,
         variant: "destructive",
       });
@@ -161,7 +161,7 @@ export default function SQLManager() {
     }
   };
 
-  // Загрузка SQL файла
+  // Завантаження SQL файлу
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
@@ -176,8 +176,8 @@ export default function SQLManager() {
       
       if (file.type !== 'text/plain' && !file.name.endsWith('.sql')) {
         toast({
-          title: "Ошибка",
-          description: `Файл ${file.name} не является SQL файлом`,
+          title: "Помилка",
+          description: `Файл ${file.name} не є SQL файлом`,
           variant: "destructive",
         });
         continue;
@@ -196,8 +196,8 @@ export default function SQLManager() {
         setUploadProgress(((i + 1) / files.length) * 100);
       } catch (error) {
         toast({
-          title: "Ошибка",
-          description: `Не удалось прочитать файл ${file.name}`,
+          title: "Помилка",
+          description: `Не вдалося прочитати файл ${file.name}`,
           variant: "destructive",
         });
       }
@@ -209,29 +209,29 @@ export default function SQLManager() {
 
     if (newFiles.length > 0) {
       toast({
-        title: "Файлы загружены",
-        description: `Загружено ${newFiles.length} SQL файлов`,
+        title: "Файли завантажено",
+        description: `Завантажено ${newFiles.length} SQL файлів`,
       });
     }
 
-    // Очищаем input
+    // Очищаємо input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
-  // Выполнение SQL из файла
+  // Виконання SQL з файлу
   const executeFile = async (file: SQLFile) => {
     setSqlQuery(file.content);
     setSelectedFile(file);
     
     toast({
-      title: "Файл загружен",
-      description: `SQL из файла ${file.name} загружен в редактор`,
+      title: "Файл завантажено",
+      description: `SQL з файлу ${file.name} завантажено в редактор`,
     });
   };
 
-  // Экспорт результатов
+  // Експорт результатів
   const exportResults = () => {
     const data = {
       timestamp: new Date().toISOString(),
@@ -250,12 +250,12 @@ export default function SQLManager() {
     URL.revokeObjectURL(url);
   };
 
-  // Очистка результатов
+  // Очищення результатів
   const clearResults = () => {
     setResults([]);
     toast({
-      title: "Результаты очищены",
-      description: "История выполнения SQL запросов очищена",
+      title: "Результати очищено",
+      description: "Історію виконання SQL запитів очищено",
     });
   };
 
@@ -266,14 +266,14 @@ export default function SQLManager() {
       
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">SQL Manager</h1>
+          <h1 className="text-3xl font-bold mb-2">SQL Менеджер</h1>
           <p className="text-muted-foreground">
-            Управление базой данных через SQL запросы, импорт и экспорт файлов
+            Управління базою даних через SQL запити, імпорт та експорт файлів
           </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Левая колонка - SQL редактор и файлы */}
+          {/* Ліва колонка - SQL редактор та файли */}
           <div className="space-y-6">
             {/* SQL редактор */}
             <Card>
@@ -283,14 +283,14 @@ export default function SQLManager() {
                   SQL Редактор
                 </CardTitle>
                 <CardDescription>
-                  Введите SQL запрос для выполнения
+                  Введіть SQL запит для виконання
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <Textarea
                   value={sqlQuery}
                   onChange={(e) => setSqlQuery(e.target.value)}
-                  placeholder="Введите SQL запрос..."
+                  placeholder="Введіть SQL запит..."
                   rows={8}
                   className="font-mono text-sm"
                 />
@@ -303,12 +303,12 @@ export default function SQLManager() {
                     {isExecuting ? (
                       <>
                         <Clock className="w-4 h-4 mr-2 animate-spin" />
-                        Выполняется...
+                        Виконується...
                       </>
                     ) : (
                       <>
                         <Play className="w-4 h-4 mr-2" />
-                        Выполнить SQL
+                        Виконати SQL
                       </>
                     )}
                   </Button>
@@ -317,21 +317,21 @@ export default function SQLManager() {
                     onClick={() => setSqlQuery('')}
                     disabled={!sqlQuery.trim()}
                   >
-                    Очистить
+                    Очистити
                   </Button>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Загрузка файлов */}
+            {/* Завантаження файлів */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Upload className="w-5 h-5" />
-                  Загрузка SQL файлов
+                  Завантаження SQL файлів
                 </CardTitle>
                 <CardDescription>
-                  Загрузите .sql файлы для импорта
+                  Завантажте .sql файли для імпорту
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -353,12 +353,12 @@ export default function SQLManager() {
                     {isUploading ? (
                       <>
                         <Clock className="w-4 h-4 mr-2 animate-spin" />
-                        Загрузка...
+                        Завантаження...
                       </>
                     ) : (
                       <>
                         <Upload className="w-4 h-4 mr-2" />
-                        Выбрать SQL файлы
+                        Вибрати SQL файли
                       </>
                     )}
                   </Button>
@@ -366,16 +366,16 @@ export default function SQLManager() {
                     <div className="mt-4">
                       <Progress value={uploadProgress} className="w-full" />
                       <p className="text-sm text-muted-foreground mt-2">
-                        Прогресс загрузки: {Math.round(uploadProgress)}%
+                        Прогрес завантаження: {Math.round(uploadProgress)}%
                       </p>
                     </div>
                   )}
                 </div>
 
-                {/* Загруженные файлы */}
+                {/* Завантажені файли */}
                 {uploadedFiles.length > 0 && (
                   <div className="space-y-2">
-                    <h4 className="font-medium">Загруженные файлы:</h4>
+                    <h4 className="font-medium">Завантажені файли:</h4>
                     {uploadedFiles.map((file, index) => (
                       <div
                         key={index}
@@ -396,7 +396,7 @@ export default function SQLManager() {
                           variant="outline"
                           onClick={() => executeFile(file)}
                         >
-                          Загрузить
+                          Завантажити
                         </Button>
                       </div>
                     ))}
@@ -406,17 +406,17 @@ export default function SQLManager() {
             </Card>
           </div>
 
-          {/* Правая колонка - результаты и управление */}
+          {/* Права колонка - результати та управління */}
           <div className="space-y-6">
-            {/* Управление результатами */}
+            {/* Управління результатами */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <FileText className="w-5 h-5" />
-                  Управление результатами
+                  Управління результатами
                 </CardTitle>
                 <CardDescription>
-                  Экспорт и очистка результатов выполнения
+                  Експорт та очищення результатів виконання
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -428,43 +428,43 @@ export default function SQLManager() {
                     className="flex-1"
                   >
                     <Download className="w-4 h-4 mr-2" />
-                    Экспорт результатов
+                    Експорт результатів
                   </Button>
                   <Button
                     variant="outline"
                     onClick={clearResults}
                     disabled={results.length === 0}
                   >
-                    Очистить
+                    Очистити
                   </Button>
                 </div>
                 
                 {results.length > 0 && (
                   <div className="text-sm text-muted-foreground">
-                    Всего запросов: {results.length} • 
-                    Успешно: {results.filter(r => r.success).length} • 
-                    Ошибок: {results.filter(r => !r.success).length}
+                    Всього запитів: {results.length} • 
+                    Успішно: {results.filter(r => r.success).length} • 
+                    Помилок: {results.filter(r => !r.success).length}
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            {/* Результаты выполнения */}
+            {/* Результати виконання */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <CheckCircle className="w-5 h-5" />
-                  Результаты выполнения
+                  Результати виконання
                 </CardTitle>
                 <CardDescription>
-                  История выполнения SQL запросов
+                  Історія виконання SQL запитів
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {results.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>Результаты выполнения SQL запросов появятся здесь</p>
+                    <p>Результати виконання SQL запитів з'являться тут</p>
                   </div>
                 ) : (
                   <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -486,7 +486,7 @@ export default function SQLManager() {
                                 <XCircle className="w-4 h-4 text-red-600" />
                               )}
                               <Badge variant={result.success ? "default" : "destructive"}>
-                                {result.success ? "Успешно" : "Ошибка"}
+                                {result.success ? "Успішно" : "Помилка"}
                               </Badge>
                               {result.executionTime && (
                                 <Badge variant="outline">
@@ -495,7 +495,7 @@ export default function SQLManager() {
                               )}
                               {result.rowsAffected !== undefined && (
                                 <Badge variant="outline">
-                                  {result.rowsAffected} строк
+                                  {result.rowsAffected} рядків
                                 </Badge>
                               )}
                             </div>
@@ -510,7 +510,7 @@ export default function SQLManager() {
                             {result.data && (
                               <details className="mt-2">
                                 <summary className="cursor-pointer text-sm text-muted-foreground">
-                                  Показать данные
+                                  Показати дані
                                 </summary>
                                 <pre className="text-xs bg-muted p-2 rounded mt-2 overflow-x-auto">
                                   {JSON.stringify(result.data, null, 2)}
