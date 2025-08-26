@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   Upload, 
   Download, 
@@ -19,7 +20,9 @@ import {
   AlertCircle,
   Database,
   Clock,
-  FileCode
+  FileCode,
+  Table,
+  Database as DatabaseIcon
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
@@ -39,6 +42,12 @@ interface SQLFile {
   lastModified: Date;
 }
 
+interface TableInfo {
+  name: string;
+  rowCount: number;
+  size: string;
+}
+
 export default function SQLManager() {
   const { isAdmin, isLoading: adminLoading } = useAdmin();
   const [sqlQuery, setSqlQuery] = useState('');
@@ -48,7 +57,195 @@ export default function SQLManager() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<SQLFile[]>([]);
   const [selectedFile, setSelectedFile] = useState<SQLFile | null>(null);
+  const [tables, setTables] = useState<TableInfo[]>([]);
+  const [selectedTable, setSelectedTable] = useState<string>('');
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Завантаження списку таблиць
+  const loadTables = async () => {
+    try {
+      // Отримуємо список таблиць через стандартний API
+      const { data: tablesData, error } = await supabase
+        .from('information_schema.tables')
+        .select('table_name')
+        .eq('table_schema', 'public')
+        .eq('table_type', 'BASE TABLE');
+
+      if (error) throw error;
+
+      // Отримуємо інформацію про кожну таблицю
+      const tablesInfo: TableInfo[] = [];
+      
+      for (const table of tablesData || []) {
+        try {
+          const { count } = await supabase
+            .from(table.table_name)
+            .select('*', { count: 'exact', head: true });
+
+          tablesInfo.push({
+            name: table.table_name,
+            rowCount: count || 0,
+            size: 'N/A' // Розмір таблиці не доступний через API
+          });
+        } catch (err) {
+          // Якщо немає доступу до таблиці, пропускаємо
+          continue;
+        }
+      }
+
+      setTables(tablesInfo);
+    } catch (error) {
+      console.error('Error loading tables:', error);
+      toast({
+        title: "Помилка",
+        description: "Не вдалося завантажити список таблиць",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Експорт таблиці
+  const exportTable = async (tableName: string) => {
+    if (!tableName) return;
+
+    setIsExporting(true);
+    setExportProgress(0);
+
+    try {
+      // Отримуємо дані таблиці
+      const { data, error } = await supabase
+        .from(tableName)
+        .select('*');
+
+      if (error) throw error;
+
+      // Створюємо CSV
+      const csvContent = convertToCSV(data || []);
+      
+      // Створюємо файл для завантаження
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${tableName}_${new Date().toISOString().split('T')[0]}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+
+      setExportProgress(100);
+      
+      toast({
+        title: "Експорт завершено",
+        description: `Таблицю ${tableName} експортовано успішно`,
+      });
+
+    } catch (error: any) {
+      toast({
+        title: "Помилка експорту",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+      setExportProgress(0);
+    }
+  };
+
+  // Конвертація даних в CSV
+  const convertToCSV = (data: any[]): string => {
+    if (data.length === 0) return '';
+
+    const headers = Object.keys(data[0]);
+    const csvRows = [headers.join(',')];
+
+    for (const row of data) {
+      const values = headers.map(header => {
+        const value = row[header];
+        // Екрануємо коми та лапки
+        if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+          return `"${value.replace(/"/g, '""')}"`;
+        }
+        return value;
+      });
+      csvRows.push(values.join(','));
+    }
+
+    return csvRows.join('\n');
+  };
+
+  // Експорт структури таблиці (DDL)
+  const exportTableStructure = async (tableName: string) => {
+    try {
+      // Отримуємо інформацію про колонки
+      const { data: columns, error: columnsError } = await supabase
+        .from('information_schema.columns')
+        .select('*')
+        .eq('table_schema', 'public')
+        .eq('table_name', tableName)
+        .order('ordinal_position');
+
+      if (columnsError) throw columnsError;
+
+      // Створюємо DDL
+      let ddl = `-- Структура таблиці ${tableName}\n`;
+      ddl += `CREATE TABLE IF NOT EXISTS ${tableName} (\n`;
+      
+      const columnDefs = columns?.map(col => {
+        let def = `  ${col.column_name} ${col.data_type}`;
+        if (col.character_maximum_length) {
+          def += `(${col.character_maximum_length})`;
+        }
+        if (col.is_nullable === 'NO') {
+          def += ' NOT NULL';
+        }
+        if (col.column_default) {
+          def += ` DEFAULT ${col.column_default}`;
+        }
+        return def;
+      });
+
+      ddl += columnDefs?.join(',\n') || '';
+      ddl += '\n);\n\n';
+
+      // Додаємо індекси
+      const { data: indexes, error: indexesError } = await supabase
+        .from('information_schema.statistics')
+        .select('*')
+        .eq('table_schema', 'public')
+        .eq('table_name', tableName);
+
+      if (!indexesError && indexes) {
+        ddl += '-- Індекси\n';
+        for (const index of indexes) {
+          if (index.index_name && !index.index_name.includes('_pkey')) {
+            ddl += `CREATE INDEX ${index.index_name} ON ${tableName} (${index.column_name});\n`;
+          }
+        }
+      }
+
+      // Створюємо файл для завантаження
+      const blob = new Blob([ddl], { type: 'text/plain;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${tableName}_structure_${new Date().toISOString().split('T')[0]}.sql`;
+      link.click();
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Структуру експортовано",
+        description: `DDL таблиці ${tableName} експортовано успішно`,
+      });
+
+    } catch (error: any) {
+      toast({
+        title: "Помилка експорту структури",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   // Перевірка прав доступу
   if (adminLoading) {
@@ -77,7 +274,7 @@ export default function SQLManager() {
     );
   }
 
-  // Виконання SQL запиту
+  // Виконання SQL запиту (якщо функція exec_sql існує)
   const executeSQL = async () => {
     if (!sqlQuery.trim()) {
       toast({
@@ -92,59 +289,47 @@ export default function SQLManager() {
     const startTime = Date.now();
 
     try {
-      // Розбиваємо SQL на окремі запити
-      const queries = sqlQuery
-        .split(';')
-        .map(q => q.trim())
-        .filter(q => q.length > 0);
-
-      const newResults: SQLResult[] = [];
-
-      for (const query of queries) {
-        if (!query.trim()) continue;
-
-        try {
-          const { data, error, count } = await supabase.rpc('exec_sql', {
-            sql_query: query
-          });
-
-          if (error) {
-            newResults.push({
-              success: false,
-              message: `Помилка виконання: ${query.substring(0, 50)}...`,
-              error: error.message,
-              executionTime: Date.now() - startTime
-            });
-          } else {
-            newResults.push({
-              success: true,
-              message: `Успішно виконано: ${query.substring(0, 50)}...`,
-              data,
-              rowsAffected: count || 0,
-              executionTime: Date.now() - startTime
-            });
-          }
-        } catch (err: any) {
-          newResults.push({
-            success: false,
-            message: `Помилка виконання: ${query.substring(0, 50)}...`,
-            error: err.message,
-            executionTime: Date.now() - startTime
-          });
-        }
-      }
-
-      setResults(prev => [...newResults, ...prev]);
-      
-      toast({
-        title: "SQL виконано",
-        description: `Виконано ${newResults.filter(r => r.success).length} з ${newResults.length} запитів`,
+      // Спробуємо використати функцію exec_sql, якщо вона існує
+      const { data, error } = await supabase.rpc('exec_sql', {
+        sql_query: sqlQuery
       });
+
+      if (error) {
+        // Якщо функція не існує, показуємо помилку
+        const result: SQLResult = {
+          success: false,
+          message: "Функція exec_sql не знайдена. Створіть її в Supabase Dashboard.",
+          error: error.message,
+          executionTime: Date.now() - startTime
+        };
+        
+        setResults(prev => [result, ...prev]);
+        
+        toast({
+          title: "Помилка",
+          description: "Функція exec_sql не створена. Використовуйте експорт таблиць.",
+          variant: "destructive",
+        });
+      } else {
+        const result: SQLResult = {
+          success: true,
+          message: "SQL виконано успішно",
+          data,
+          executionTime: Date.now() - startTime
+        };
+        
+        setResults(prev => [result, ...prev]);
+        
+        toast({
+          title: "SQL виконано",
+          description: "Запит виконано успішно",
+        });
+      }
 
     } catch (error: any) {
       const result: SQLResult = {
         success: false,
-        message: "Критична помилка виконання",
+        message: "Помилка виконання SQL",
         error: error.message,
         executionTime: Date.now() - startTime
       };
@@ -272,7 +457,7 @@ export default function SQLManager() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Ліва колонка - SQL редактор та файли */}
           <div className="space-y-6">
             {/* SQL редактор */}
@@ -283,7 +468,7 @@ export default function SQLManager() {
                   SQL Редактор
                 </CardTitle>
                 <CardDescription>
-                  Введіть SQL запит для виконання
+                  Введіть SQL запит для виконання (потребує функцію exec_sql)
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -400,6 +585,85 @@ export default function SQLManager() {
                         </Button>
                       </div>
                     ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Середня колонка - Експорт таблиць */}
+          <div className="space-y-6">
+            {/* Експорт таблиць */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Table className="w-5 h-5" />
+                  Експорт таблиць
+                </CardTitle>
+                <CardDescription>
+                  Експорт даних та структури таблиць
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={loadTables}
+                    className="flex-1"
+                  >
+                    <DatabaseIcon className="w-4 h-4 mr-2" />
+                    Завантажити таблиці
+                  </Button>
+                </div>
+
+                {tables.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="font-medium">Доступні таблиці:</h4>
+                    {tables.map((table) => (
+                      <div
+                        key={table.name}
+                        className="p-3 bg-muted rounded-lg space-y-2"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-sm">{table.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {table.rowCount} рядків
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => exportTable(table.name)}
+                            disabled={isExporting}
+                            className="flex-1"
+                          >
+                            <Download className="w-4 h-4 mr-2" />
+                            Експорт CSV
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => exportTableStructure(table.name)}
+                            className="flex-1"
+                          >
+                            <FileCode className="w-4 h-4 mr-2" />
+                            Структура
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {isExporting && (
+                  <div className="mt-4">
+                    <Progress value={exportProgress} className="w-full" />
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Прогрес експорту: {Math.round(exportProgress)}%
+                    </p>
                   </div>
                 )}
               </CardContent>
@@ -530,3 +794,4 @@ export default function SQLManager() {
       </div>
     </div>
   );
+}
