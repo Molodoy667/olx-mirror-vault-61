@@ -1,0 +1,14 @@
+# Global owners
+* @Molodoy667
+
+# Frontend components
+src/components/ @Molodoy667
+src/pages/ @Molodoy667
+
+# Backend and database
+supabase/ @Molodoy667
+src/hooks/ @Molodoy667
+
+# Configuration files
+*.config.* @Molodoy667
+package.json @Molodoy667
