@@ -94,6 +94,13 @@ export async function loadSQLFiles(): Promise<SQLFile[]> {
         size: 32768,
         lastModified: new Date().toISOString(),
         status: 'idle'
+      },
+      {
+        name: 'debug_database_manager.sql',
+        content: await getFileContent('debug_database_manager.sql'),
+        size: 4096,
+        lastModified: new Date().toISOString(),
+        status: 'idle'
       }
     ];
 
@@ -588,7 +595,56 @@ GRANT EXECUTE ON FUNCTION public.get_all_tables() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_table_structure(TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_table_data(TEXT, INT, INT, TEXT, TEXT, TEXT) TO authenticated;
 
-SELECT '✅ Database Manager RPC функції створені успішно!' as result;`
+SELECT '✅ Database Manager RPC функції створені успішно!' as result;`,
+
+    'debug_database_manager.sql': `-- 🔍 ДІАГНОСТИКА DATABASE MANAGER
+-- Перевіряємо чи створені функції та чи працюють
+
+-- 1. ПЕРЕВІРЯЄМО ЧИ ІСНУЮТЬ ФУНКЦІЇ
+SELECT 
+  'Перевірка функцій Database Manager:' as step,
+  COUNT(*) as created_functions
+FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+WHERE n.nspname = 'public' 
+  AND p.proname IN ('get_all_tables', 'get_table_structure', 'get_table_data', 'get_all_functions');
+
+-- 2. СПИСОК СТВОРЕНИХ ФУНКЦІЙ
+SELECT 
+  'Створені функції:' as info,
+  p.proname as function_name,
+  pg_get_function_arguments(p.oid) as arguments
+FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+WHERE n.nspname = 'public' 
+  AND p.proname LIKE '%get_%'
+ORDER BY p.proname;
+
+-- 3. ПРОСТИЙ ТЕСТ ТАБЛИЦЬ ЧЕРЕЗ СТАНДАРТНІ ЗАПИТИ
+SELECT 
+  'Прямий запит таблиць:' as direct_test,
+  schemaname,
+  tablename,
+  hasindexes,
+  hasrules,
+  hastriggers
+FROM pg_tables 
+WHERE schemaname = 'public'
+ORDER BY tablename
+LIMIT 10;
+
+-- 4. ПЕРЕВІРЯЄМО ПРАВА ДОСТУПУ
+SELECT 
+  'Права доступу на функції:' as permissions,
+  p.proname,
+  has_function_privilege('authenticated', p.oid, 'EXECUTE') as can_execute
+FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+WHERE n.nspname = 'public' 
+  AND p.proname IN ('get_all_tables', 'get_table_structure', 'get_table_data', 'get_all_functions');
+
+-- 5. ТЕСТ ВИКЛИКУ get_all_tables
+SELECT * FROM public.get_all_tables() LIMIT 5;`
   };
 
   return contents[fileName] || `-- SQL file: ${fileName}

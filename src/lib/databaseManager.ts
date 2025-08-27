@@ -48,18 +48,43 @@ export const databaseManager = {
   // Отримання списку всіх таблиць
   async getAllTables(): Promise<TableInfo[]> {
     try {
+      // Спочатку пробуємо RPC функцію
       const { data, error } = await supabase
         .rpc('get_all_tables');
 
       if (error) {
-        console.error('Помилка отримання таблиць:', error);
-        throw new Error(`Помилка отримання таблиць: ${error.message}`);
+        console.warn('RPC get_all_tables недоступна, використовуємо fallback:', error.message);
+        
+        // Fallback: прямий запит до pg_tables
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('pg_tables')
+          .select('tablename')
+          .eq('schemaname', 'public');
+
+        if (fallbackError) {
+          console.error('Fallback також не працює:', fallbackError);
+          throw new Error(`Помилка отримання таблиць: ${fallbackError.message}`);
+        }
+
+        // Перетворюємо fallback дані в потрібний формат
+        return (fallbackData || []).map(table => ({
+          table_name: table.tablename,
+          row_count: 0,
+          table_size: 'Невідомо',
+          description: 'Базова інформація (RPC недоступна)'
+        }));
       }
 
       return data || [];
     } catch (error) {
       console.error('Критична помилка getAllTables:', error);
-      throw error;
+      // Останній fallback - повертаємо пусту таблицю з повідомленням
+      return [{
+        table_name: 'ERROR',
+        row_count: 0,
+        table_size: '0 B',
+        description: `Помилка завантаження: ${error}`
+      }];
     }
   },
 
