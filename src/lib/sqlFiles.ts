@@ -108,6 +108,13 @@ export async function loadSQLFiles(): Promise<SQLFile[]> {
         size: 8192,
         lastModified: new Date().toISOString(),
         status: 'idle'
+      },
+      {
+        name: 'test_exec_sql.sql',
+        content: await getFileContent('test_exec_sql.sql'),
+        size: 2048,
+        lastModified: new Date().toISOString(),
+        status: 'idle'
       }
     ];
 
@@ -743,7 +750,46 @@ GRANT EXECUTE ON FUNCTION public.get_simple_data(TEXT, INT, INT) TO authenticate
 
 -- ТЕСТ
 SELECT 'Спрощені функції створені!' as result;
-SELECT * FROM public.get_simple_tables() LIMIT 5;`
+SELECT * FROM public.get_simple_tables() LIMIT 5;`,
+
+    'test_exec_sql.sql': `-- 🧪 ТЕСТ ФУНКЦІЇ exec_sql
+-- Перевіряємо чи працює виконання SQL через RPC
+
+-- 1. ПРОСТИЙ ТЕСТ
+SELECT 'Тест exec_sql працює!' as test_message, NOW() as current_time;
+
+-- 2. ПЕРЕВІРКА ІСНУВАННЯ exec_sql ФУНКЦІЇ
+SELECT 
+  'exec_sql function check:' as info,
+  CASE 
+    WHEN EXISTS (
+      SELECT 1 FROM pg_proc p 
+      JOIN pg_namespace n ON p.pronamespace = n.oid 
+      WHERE n.nspname = 'public' AND p.proname = 'exec_sql'
+    ) 
+    THEN '✅ exec_sql функція існує' 
+    ELSE '❌ exec_sql функція НЕ існує' 
+  END as status;
+
+-- 3. СПИСОК ВСІХ PUBLIC ФУНКЦІЙ
+SELECT 
+  'Available functions:' as info,
+  p.proname as function_name,
+  pg_get_function_arguments(p.oid) as arguments
+FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+WHERE n.nspname = 'public' 
+  AND p.proname NOT LIKE 'pg_%'
+ORDER BY p.proname;
+
+-- 4. ТЕСТ СТВОРЕННЯ ПРОСТОЇ ФУНКЦІЇ
+CREATE OR REPLACE FUNCTION public.test_function()
+RETURNS TEXT LANGUAGE sql AS $$
+  SELECT 'Test function created successfully!' as result;
+$$;
+
+-- 5. ВИКЛИК ТЕСТОВОЇ ФУНКЦІЇ
+SELECT public.test_function() as test_result;`
   };
 
   return contents[fileName] || `-- SQL file: ${fileName}
@@ -754,55 +800,45 @@ SELECT 'File content would be loaded here' as demo_message;`;
 }
 
 export async function executeSQLFile(fileName: string, content: string): Promise<any> {
-  // В реальной среде здесь бы был запрос к базе данных
-  // Для демонстрации симулируем выполнение
+  // РЕАЛЬНЕ ВИКОНАННЯ SQL ЧЕРЕЗ SUPABASE
+  const { supabase } = await import('@/integrations/supabase/client');
   
   const startTime = Date.now();
   
-  // Симуляция задержки выполнения
-  await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
-  
-  const executionTime = Date.now() - startTime;
-  
-  // Симулируем различные результаты в зависимости от содержимого
-  if (content.includes('SELECT')) {
-    return {
-      success: true,
-      message: 'SELECT запит виконано успішно',
-      rowsAffected: Math.floor(Math.random() * 100) + 1,
-      executionTime,
-      data: {
-        rows: Math.floor(Math.random() * 50) + 1,
-        columns: ['id', 'name', 'count']
-      }
-    };
-  } else if (content.includes('CREATE')) {
-    return {
-      success: true, 
-      message: "Об'єкти бази даних створено успішно",
-      rowsAffected: 0,
-      executionTime,
-      data: {
-        created: ['function', 'index', 'trigger']
-      }
-    };
-  } else if (content.includes('UPDATE') || content.includes('INSERT')) {
-    return {
-      success: true,
-      message: 'Дані оновлено успішно', 
-      rowsAffected: Math.floor(Math.random() * 500) + 10,
-      executionTime
-    };
-  } else {
-    // Випадково імітуємо помилку
-    if (Math.random() < 0.1) {
-      throw new Error('Синтаксична помилка в SQL запиті');
+  try {
+    // Спробуємо виконати через exec_sql функцію
+    const { data, error } = await supabase.rpc('exec_sql', {
+      sql_query: content
+    });
+    
+    const executionTime = Date.now() - startTime;
+    
+    if (error) {
+      console.error('Помилка виконання SQL:', error);
+      return {
+        success: false,
+        message: `Помилка виконання SQL: ${error.message}`,
+        error: error.message,
+        executionTime
+      };
     }
     
     return {
       success: true,
-      message: 'SQL файл виконано успішно',
-      rowsAffected: Math.floor(Math.random() * 10),
+      message: `SQL файл ${fileName} виконано успішно`,
+      data: data,
+      executionTime,
+      rowsAffected: Array.isArray(data) ? data.length : 1
+    };
+    
+  } catch (error: any) {
+    const executionTime = Date.now() - startTime;
+    console.error('Критична помилка виконання SQL:', error);
+    
+    return {
+      success: false,
+      message: `Критична помилка: ${error.message}`,
+      error: error.message,
       executionTime
     };
   }
