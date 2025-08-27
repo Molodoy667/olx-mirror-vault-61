@@ -1,0 +1,22 @@
+# SPA fallback for client-side routing
+/*    /index.html   200
+
+# API routes (if any)
+/api/*  /api/:splat  200
+
+# Static assets should be served as-is
+/*.js   /:splat  200
+/*.css  /:splat  200
+/*.png  /:splat  200
+/*.jpg  /:splat  200
+/*.jpeg /:splat  200
+/*.gif  /:splat  200
+/*.svg  /:splat  200
+/*.ico  /:splat  200
+/*.woff /:splat  200
+/*.woff2 /:splat  200
+/*.ttf  /:splat  200
+/*.eot  /:splat  200
+/*.json /:splat  200
+/*.xml  /:splat  200
+/*.txt  /:splat  200
