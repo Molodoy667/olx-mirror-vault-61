@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emergency Debug</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            background: #ff4444; 
+            color: white;
+            font-size: 18px;
+        }
+        .box { 
+            background: rgba(0,0,0,0.3); 
+            padding: 20px; 
+            margin: 10px 0; 
+            border-radius: 5px; 
+        }
+    </style>
+</head>
+<body>
+    <h1>🚨 EMERGENCY DEBUG</h1>
+    <div class="box">
+        <h2>✅ Если видите это - HTML работает</h2>
+        <p>Время: <span id="time">Загрузка...</span></p>
+        <p>URL: <span id="url">Загрузка...</span></p>
+    </div>
+    
+    <div class="box">
+        <h3>Тесты JavaScript:</h3>
+        <div id="js-tests">Тестируем...</div>
+    </div>
+    
+    <div class="box">
+        <h3>Проверяем index.html:</h3>
+        <button onclick="checkIndex()">Проверить основную страницу</button>
+        <div id="index-result"></div>
+    </div>
+    
+    <script>
+        // Самые базовые тесты
+        try {
+            document.getElementById('time').textContent = new Date().toLocaleString();
+            document.getElementById('url').textContent = window.location.href;
+            
+            let tests = '';
+            tests += '✅ document.getElementById работает<br>';
+            tests += '✅ Date() работает<br>';
+            tests += '✅ window.location работает<br>';
+            
+            if (typeof fetch !== 'undefined') {
+                tests += '✅ fetch API доступен<br>';
+            } else {
+                tests += '❌ fetch API недоступен<br>';
+            }
+            
+            try {
+                localStorage.setItem('test', 'ok');
+                localStorage.removeItem('test');
+                tests += '✅ localStorage работает<br>';
+            } catch(e) {
+                tests += '❌ localStorage: ' + e.message + '<br>';
+            }
+            
+            document.getElementById('js-tests').innerHTML = tests;
+            
+        } catch (error) {
+            document.getElementById('js-tests').innerHTML = '❌ Критическая ошибка JS: ' + error.message;
+        }
+        
+        function checkIndex() {
+            const result = document.getElementById('index-result');
+            result.innerHTML = 'Проверяем...';
+            
+            fetch('/')
+                .then(response => response.text())
+                .then(html => {
+                    if (html.includes('<div id="root">')) {
+                        result.innerHTML = '✅ index.html доступен и содержит div#root';
+                        
+                        // Ищем главный JS файл
+                        const scriptMatch = html.match(/src="([^"]*index[^"]*\.js)"/);
+                        if (scriptMatch) {
+                            result.innerHTML += '<br>📝 JS файл: ' + scriptMatch[1];
+                            
+                            // Пробуем загрузить JS
+                            const script = document.createElement('script');
+                            script.src = scriptMatch[1];
+                            script.onload = () => {
+                                result.innerHTML += '<br>✅ JS файл загружен';
+                            };
+                            script.onerror = () => {
+                                result.innerHTML += '<br>❌ Ошибка загрузки JS файла';
+                            };
+                            document.head.appendChild(script);
+                        }
+                    } else {
+                        result.innerHTML = '❌ Проблема с index.html';
+                    }
+                })
+                .catch(error => {
+                    result.innerHTML = '❌ Ошибка: ' + error.message;
+                });
+        }
+        
+        // Автоматически проверяем через 2 секунды
+        setTimeout(checkIndex, 2000);
+    </script>
+</body>
+</html>
