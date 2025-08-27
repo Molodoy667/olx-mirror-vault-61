@@ -64,7 +64,10 @@ export function AdminHeader() {
           <Button
             variant="outline"
             size="sm"
-            onClick={signOut}
+            onClick={async () => {
+              await signOut();
+              navigate('/auth');
+            }}
             className="hidden sm:flex"
           >
             <LogOut className="w-4 h-4 mr-2" />
@@ -74,7 +77,10 @@ export function AdminHeader() {
           <Button
             variant="outline"
             size="icon"
-            onClick={signOut}
+            onClick={async () => {
+              await signOut();
+              navigate('/auth');
+            }}
             className="sm:hidden"
           >
             <LogOut className="w-4 h-4" />

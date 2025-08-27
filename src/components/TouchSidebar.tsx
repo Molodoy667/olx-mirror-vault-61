@@ -146,8 +146,9 @@ export function TouchSidebar({ isOpen, onClose, onToggle }: TouchSidebarProps) {
     onClose();
   };
 
-  const handleSignOut = () => {
-    signOut();
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth');
     onClose();
   };
 

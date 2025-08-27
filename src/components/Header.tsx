@@ -88,7 +88,10 @@ export function Header() {
                         </>
                       )}
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={signOut}>
+                      <DropdownMenuItem onClick={async () => {
+                        await signOut();
+                        navigate('/auth');
+                      }}>
                         <LogOut className="w-4 h-4 mr-2" />
                         Вийти
                       </DropdownMenuItem>
