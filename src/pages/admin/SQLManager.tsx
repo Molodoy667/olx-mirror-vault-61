@@ -6,6 +6,7 @@ import { AdminHeader } from '@/components/admin/AdminHeader';
 import { SQLFileManager } from '@/components/admin/SQLFileManager';
 import { DatabaseAnalyzer } from '@/components/admin/DatabaseAnalyzer';
 import { FullDatabaseManager } from '@/components/admin/FullDatabaseManager';
+import { DirectSQLClient } from '@/components/admin/DirectSQLClient';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -53,7 +54,7 @@ interface TableInfo {
 
 export default function SQLManager() {
   const { isAdmin, isLoading: adminLoading } = useAdmin();
-  const [activeTab, setActiveTab] = useState<'sql-editor' | 'database-manager' | 'file-manager' | 'analyzer'>('database-manager');
+  const [activeTab, setActiveTab] = useState<'sql-editor' | 'database-manager' | 'file-manager' | 'analyzer' | 'direct-sql'>('database-manager');
   const [sqlQuery, setSqlQuery] = useState('');
   const [isExecuting, setIsExecuting] = useState(false);
   const [results, setResults] = useState<SQLResult[]>([]);
@@ -516,6 +517,19 @@ export default function SQLManager() {
                 <span>Аналізатор БД</span>
               </div>
             </button>
+            <button
+              onClick={() => setActiveTab('direct-sql')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'direct-sql'
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <Database className="h-4 w-4" />
+                <span>Прямий SQL</span>
+              </div>
+            </button>
           </nav>
         </div>
 
@@ -898,6 +912,10 @@ export default function SQLManager() {
               });
             }}
           />
+        )}
+
+        {activeTab === 'direct-sql' && (
+          <DirectSQLClient />
         )}
       </div>
     </div>
