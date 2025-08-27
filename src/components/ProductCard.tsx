@@ -2,6 +2,7 @@ import { Heart, MapPin } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { getOrCreateSeoUrl } from "@/lib/seo";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
@@ -89,7 +90,15 @@ export function ProductCard({
   return (
     <Card 
       className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer group"
-      onClick={() => navigate(`/listing/${id}`)}
+      onClick={async () => {
+        try {
+          const seoUrl = await getOrCreateSeoUrl(id, title);
+          navigate(seoUrl);
+        } catch (error) {
+          console.error('Error navigating to listing:', error);
+          navigate(`/listing/${id}`);
+        }
+      }}
     >
       <div className="relative">
         <img 

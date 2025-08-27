@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAdmin } from '@/hooks/useAdmin';
+import { getOrCreateSeoUrl } from '@/lib/seo';
 import { supabase } from '@/integrations/supabase/client';
 import { AdminHeader } from '@/components/admin/AdminHeader';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
@@ -279,7 +280,15 @@ export default function AdminListings() {
                         <Button
                           variant="outline"
                           size="icon"
-                          onClick={() => navigate(`/listing/${listing.id}`)}
+                          onClick={async () => {
+                            try {
+                              const seoUrl = await getOrCreateSeoUrl(listing.id, listing.title);
+                              navigate(seoUrl);
+                            } catch (error) {
+                              console.error('Error navigating to listing:', error);
+                              navigate(`/listing/${listing.id}`);
+                            }
+                          }}
                           className="w-8 h-8"
                         >
                           <Eye className="w-3 h-3" />

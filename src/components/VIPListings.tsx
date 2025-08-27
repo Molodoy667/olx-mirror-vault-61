@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { getOrCreateSeoUrl } from "@/lib/seo";
 import {
   Carousel,
   CarouselContent,
@@ -24,8 +25,14 @@ export function VIPListings() {
     api.on("select", () => {});
   }, [api]);
 
-  const handleListingClick = (listingId: string) => {
-    navigate(`/listing/${listingId}`);
+  const handleListingClick = async (listingId: string, title: string) => {
+    try {
+      const seoUrl = await getOrCreateSeoUrl(listingId, title);
+      navigate(seoUrl);
+    } catch (error) {
+      console.error('Error navigating to listing:', error);
+      navigate(`/listing/${listingId}`);
+    }
   };
 
   const formatPrice = (price: number | null, currency: string) => {
@@ -81,7 +88,7 @@ export function VIPListings() {
                 {listings?.map((listing) => (
                   <CarouselItem key={listing.id} className="pl-2 md:pl-4 basis-full md:basis-1/2 lg:basis-1/3">
                     <div
-                      onClick={() => handleListingClick(listing.id)}
+                      onClick={() => handleListingClick(listing.id, listing.title)}
                       className="cursor-pointer group relative h-48 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300"
                     >
                       {/* Background Image */}

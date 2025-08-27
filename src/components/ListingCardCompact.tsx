@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { MapPin, Heart, Eye, Calendar, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from 'date-fns';
+import { getOrCreateSeoUrl } from "@/lib/seo";
 import { uk } from 'date-fns/locale';
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
@@ -84,7 +85,15 @@ export const ListingCardCompact = ({
   return (
     <Card 
       className="group cursor-pointer hover:shadow-lg transition-all duration-300 overflow-hidden"
-      onClick={() => navigate(`/listing/${id}`)}
+      onClick={async () => {
+        try {
+          const seoUrl = await getOrCreateSeoUrl(id, title);
+          navigate(seoUrl);
+        } catch (error) {
+          console.error('Error navigating to listing:', error);
+          navigate(`/listing/${id}`);
+        }
+      }}
     >
       <div className="flex">
         {/* Image */}

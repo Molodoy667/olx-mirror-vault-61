@@ -8,6 +8,7 @@ import { uk } from 'date-fns/locale';
 import { useListingLikes } from "@/hooks/useListingLikes";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
+import { getOrCreateSeoUrl } from "@/lib/seo";
 
 interface ProductCardNewProps {
   id: string;
@@ -42,12 +43,19 @@ export const ProductCardNew = ({
   const { user } = useAuth();
   const { isLiked, toggleLike, isLoading: likeLoading } = useListingLikes(id);
 
-  const handleCardClick = (e: React.MouseEvent) => {
+  const handleCardClick = async (e: React.MouseEvent) => {
     // Если клик по кнопке лайка, не переходим на страницу
     if ((e.target as HTMLElement).closest('button')) {
       return;
     }
-    navigate(`/listing/${id}`);
+    
+    try {
+      const seoUrl = await getOrCreateSeoUrl(id, title);
+      navigate(seoUrl);
+    } catch (error) {
+      console.error('Error navigating to listing:', error);
+      navigate(`/listing/${id}`);
+    }
   };
 
   const handleLikeClick = (e: React.MouseEvent) => {

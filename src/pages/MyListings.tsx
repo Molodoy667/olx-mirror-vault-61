@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Package, Eye, EyeOff, Trash2, Edit } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
+import { getOrCreateSeoUrl } from '@/lib/seo';
 
 export default function MyListings() {
   const { user } = useAuth();
@@ -128,7 +129,15 @@ export default function MyListings() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => navigate(`/listing/${listing.id}`)}
+                        onClick={async () => {
+                          try {
+                            const seoUrl = await getOrCreateSeoUrl(listing.id, listing.title);
+                            navigate(seoUrl);
+                          } catch (error) {
+                            console.error('Error navigating to listing:', error);
+                            navigate(`/listing/${listing.id}`);
+                          }
+                        }}
                         className="flex-1 sm:flex-none"
                       >
                         <span className="sm:hidden">Переглянути</span>

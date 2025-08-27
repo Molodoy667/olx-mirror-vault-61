@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { MapPin, Eye, Heart, Clock, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from 'date-fns';
+import { getOrCreateSeoUrl } from "@/lib/seo";
 import { uk } from 'date-fns/locale';
 import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
@@ -133,9 +134,15 @@ export const ListingCardColumn = ({
         "flex flex-col w-full max-w-sm mx-auto",
         "animate-fade-in"
       )}
-      onClick={() => {
+      onClick={async () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
-        navigate(`/listing/${id}`);
+        try {
+          const seoUrl = await getOrCreateSeoUrl(id, title);
+          navigate(seoUrl);
+        } catch (error) {
+          console.error('Error navigating to listing:', error);
+          navigate(`/listing/${id}`);
+        }
       }}
     >
       {/* Image Section */}
