@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, User } from 'lucide-react';
+import { Send, User, Circle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { uk } from 'date-fns/locale';
 import { useAuth } from '@/hooks/useAuth';
@@ -30,6 +31,7 @@ interface Message {
 
 export function ChatInterface({ conversationId, otherUserId, listingId }: ChatInterfaceProps) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [newMessage, setNewMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
@@ -56,7 +58,7 @@ export function ChatInterface({ conversationId, otherUserId, listingId }: ChatIn
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('full_name, avatar_url')
+        .select('full_name, avatar_url, last_seen')
         .eq('id', otherUserId)
         .single();
 
@@ -102,6 +104,26 @@ export function ChatInterface({ conversationId, otherUserId, listingId }: ChatIn
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  const getOnlineStatus = (lastSeen?: string) => {
+    if (!lastSeen) return { text: 'Невідомо', color: 'text-gray-400', online: false };
+    
+    const lastSeenDate = new Date(lastSeen);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now.getTime() - lastSeenDate.getTime()) / (1000 * 60));
+    
+    if (diffInMinutes < 5) {
+      return { text: 'Онлайн', color: 'text-green-500', online: true };
+    } else if (diffInMinutes < 60) {
+      return { text: `${diffInMinutes} хв тому`, color: 'text-yellow-500', online: false };
+    } else if (diffInMinutes < 1440) { // 24 hours
+      const hours = Math.floor(diffInMinutes / 60);
+      return { text: `${hours} год тому`, color: 'text-orange-500', online: false };
+    } else {
+      const days = Math.floor(diffInMinutes / 1440);
+      return { text: `${days} д тому`, color: 'text-gray-500', online: false };
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="h-96 flex items-center justify-center">
@@ -114,16 +136,31 @@ export function ChatInterface({ conversationId, otherUserId, listingId }: ChatIn
     <Card className="h-96 flex flex-col">
       {/* Chat Header */}
       <div className="p-4 border-b flex items-center gap-3">
-        <Avatar className="h-10 w-10">
-          <AvatarImage src={otherUserProfile?.avatar_url} />
-          <AvatarFallback>
-            <User className="h-5 w-5" />
-          </AvatarFallback>
-        </Avatar>
-        <div>
-          <h3 className="font-semibold">
+        <div className="relative">
+          <Avatar 
+            className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => navigate(`/profile/${otherUserId}`)}
+          >
+            <AvatarImage src={otherUserProfile?.avatar_url} />
+            <AvatarFallback>
+              <User className="h-5 w-5" />
+            </AvatarFallback>
+          </Avatar>
+          {/* Online indicator */}
+          {getOnlineStatus(otherUserProfile?.last_seen).online && (
+            <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-background rounded-full"></div>
+          )}
+        </div>
+        <div className="flex-1 cursor-pointer" onClick={() => navigate(`/profile/${otherUserId}`)}>
+          <h3 className="font-semibold hover:text-primary transition-colors">
             {otherUserProfile?.full_name || 'Користувач'}
           </h3>
+          <div className="flex items-center gap-1">
+            <Circle className={`w-2 h-2 ${getOnlineStatus(otherUserProfile?.last_seen).online ? 'text-green-500' : 'text-gray-400'} fill-current`} />
+            <span className={`text-xs ${getOnlineStatus(otherUserProfile?.last_seen).color}`}>
+              {getOnlineStatus(otherUserProfile?.last_seen).text}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -139,13 +176,13 @@ export function ChatInterface({ conversationId, otherUserId, listingId }: ChatIn
                 className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-xs px-3 py-2 rounded-lg ${
+                  className={`max-w-xs px-3 py-2 rounded-lg break-words overflow-hidden ${
                     isOwnMessage
                       ? 'bg-primary text-primary-foreground'
                       : 'bg-muted'
                   }`}
                 >
-                  <p className="text-sm">{message.content}</p>
+                  <p className="text-sm break-words whitespace-pre-wrap">{message.content}</p>
                   <p className="text-xs opacity-70 mt-1">
                     {formatDistanceToNow(new Date(message.created_at), {
                       addSuffix: true,

@@ -146,6 +146,13 @@ export async function loadSQLFiles(): Promise<SQLFile[]> {
         size: 4096,
         lastModified: new Date().toISOString(),
         status: 'idle'
+      },
+      {
+        name: '20250130_add_last_seen_to_profiles.sql',
+        content: await getFileContent('20250130_add_last_seen_to_profiles.sql'),
+        size: 8192,
+        lastModified: new Date().toISOString(),
+        status: 'idle'
       }
     ];
 
@@ -1156,7 +1163,86 @@ SELECT
 FROM pg_indexes 
 WHERE tablename = 'seo_urls';
 
--- ✅ ГОТОВО! Тепер можна використовувати SEO URLs систему.`
+-- ✅ ГОТОВО! Тепер можна використовувати SEO URLs систему.`,
+
+    '20250130_add_last_seen_to_profiles.sql': `-- Add last_seen field to profiles table for online status tracking
+-- Migration: 20250130_add_last_seen_to_profiles.sql
+-- Purpose: Add online status tracking for users in chat
+
+-- 1. Add last_seen column to profiles table
+ALTER TABLE profiles 
+ADD COLUMN IF NOT EXISTS last_seen TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+
+-- 2. Create index for efficient queries
+CREATE INDEX IF NOT EXISTS idx_profiles_last_seen ON profiles(last_seen);
+
+-- 3. Create function to update last_seen
+CREATE OR REPLACE FUNCTION update_last_seen()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.last_seen = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 4. Create trigger to automatically update last_seen on any profile update
+DROP TRIGGER IF EXISTS trigger_update_last_seen ON profiles;
+CREATE TRIGGER trigger_update_last_seen
+  BEFORE UPDATE ON profiles
+  FOR EACH ROW
+  EXECUTE FUNCTION update_last_seen();
+
+-- 5. Function to manually update last_seen (for client calls)
+CREATE OR REPLACE FUNCTION update_user_last_seen(user_id UUID)
+RETURNS VOID AS $$
+BEGIN
+  UPDATE profiles 
+  SET last_seen = NOW() 
+  WHERE id = user_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 6. Grant execute permission to authenticated users
+GRANT EXECUTE ON FUNCTION update_user_last_seen(UUID) TO authenticated;
+
+-- 7. Set initial last_seen for existing users
+UPDATE profiles 
+SET last_seen = NOW() 
+WHERE last_seen IS NULL;
+
+-- 8. Verification
+SELECT 'last_seen column added successfully! ✅' as status;
+
+-- 9. Check the results
+SELECT 
+  column_name,
+  data_type,
+  is_nullable,
+  column_default
+FROM information_schema.columns 
+WHERE table_name = 'profiles' 
+  AND column_name = 'last_seen';
+
+-- 10. Test the function
+SELECT update_user_last_seen(auth.uid()) as test_result;
+
+-- 11. Show sample data
+SELECT 
+  id, 
+  full_name, 
+  last_seen,
+  CASE 
+    WHEN last_seen > NOW() - INTERVAL '5 minutes' THEN 'Онлайн'
+    WHEN last_seen > NOW() - INTERVAL '1 hour' THEN 'Був нещодавно'
+    WHEN last_seen > NOW() - INTERVAL '1 day' THEN 'Був сьогодні'
+    ELSE 'Був давно'
+  END as status
+FROM profiles 
+WHERE last_seen IS NOT NULL
+ORDER BY last_seen DESC 
+LIMIT 5;
+
+-- ✅ ГОТОВО! Тепер користувачі мають статус онлайн/офлайн!`
   };
 
   return contents[fileName] || `-- SQL file: ${fileName}

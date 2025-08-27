@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { toast } from '@/hooks/use-toast';
-import { Send, ArrowLeft, User } from 'lucide-react';
+import { Send, ArrowLeft, User, Circle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { uk } from 'date-fns/locale';
 import { useRealTimeMessages } from '@/components/RealTimeMessages';
@@ -45,6 +45,7 @@ interface Chat {
   last_message: string;
   last_message_time: string;
   unread_count: number;
+  last_seen?: string;
 }
 
 export default function Messages() {
@@ -56,6 +57,7 @@ export default function Messages() {
   const [selectedChat, setSelectedChat] = useState<string | null>(userId || null);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Enable real-time updates
   useRealTimeMessages();
@@ -73,6 +75,20 @@ export default function Messages() {
     }
   }, [selectedChat, user, navigate]);
 
+  // Auto scroll to bottom when messages change
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
+
+  // Update user's last_seen when component mounts
+  useEffect(() => {
+    if (user) {
+      updateLastSeen();
+    }
+  }, [user]);
+
   const loadChats = async () => {
     if (!user) return;
     
@@ -81,8 +97,8 @@ export default function Messages() {
         .from('messages')
         .select(`
           *,
-          sender_profiles:profiles!messages_sender_id_fkey(id, full_name, username, avatar_url),
-          receiver_profiles:profiles!messages_receiver_id_fkey(id, full_name, username, avatar_url),
+          sender_profiles:profiles!messages_sender_id_fkey(id, full_name, username, avatar_url, last_seen),
+          receiver_profiles:profiles!messages_receiver_id_fkey(id, full_name, username, avatar_url, last_seen),
           listings(id, title)
         `)
         .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
@@ -105,6 +121,7 @@ export default function Messages() {
             last_message: msg.content,
             last_message_time: msg.created_at,
             unread_count: !msg.is_read && msg.receiver_id === user.id ? 1 : 0,
+            last_seen: otherUser?.last_seen,
           });
         } else {
           const chat = chatMap.get(otherUserId)!;
@@ -147,6 +164,36 @@ export default function Messages() {
       .eq('receiver_id', user.id);
   };
 
+  const updateLastSeen = async () => {
+    if (!user) return;
+    
+    try {
+      await supabase.rpc('update_user_last_seen', { user_id: user.id });
+    } catch (error) {
+      console.error('Error updating last seen:', error);
+    }
+  };
+
+  const getOnlineStatus = (lastSeen?: string) => {
+    if (!lastSeen) return { text: 'Невідомо', color: 'text-gray-400', online: false };
+    
+    const lastSeenDate = new Date(lastSeen);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now.getTime() - lastSeenDate.getTime()) / (1000 * 60));
+    
+    if (diffInMinutes < 5) {
+      return { text: 'Онлайн', color: 'text-green-500', online: true };
+    } else if (diffInMinutes < 60) {
+      return { text: `${diffInMinutes} хв тому`, color: 'text-yellow-500', online: false };
+    } else if (diffInMinutes < 1440) { // 24 hours
+      const hours = Math.floor(diffInMinutes / 60);
+      return { text: `${hours} год тому`, color: 'text-orange-500', online: false };
+    } else {
+      const days = Math.floor(diffInMinutes / 1440);
+      return { text: `${days} д тому`, color: 'text-gray-500', online: false };
+    }
+  };
+
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !selectedChat || !user) return;
@@ -166,6 +213,7 @@ export default function Messages() {
       setNewMessage('');
       loadMessages(selectedChat);
       loadChats();
+      updateLastSeen(); // Update last seen when sending message
     } catch (error) {
       toast({
         title: "Помилка",
@@ -213,11 +261,17 @@ export default function Messages() {
                     }`}
                   >
                     <div className="flex items-start gap-3">
-                      <Avatar>
-                        <AvatarFallback>
-                          {chat.user_name[0]?.toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
+                      <div className="relative">
+                        <Avatar>
+                          <AvatarFallback>
+                            {chat.user_name[0]?.toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        {/* Online indicator */}
+                        {getOnlineStatus(chat.last_seen).online && (
+                          <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-background rounded-full"></div>
+                        )}
+                      </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
                           <p className="font-medium truncate">{chat.user_name}</p>
@@ -226,6 +280,12 @@ export default function Messages() {
                               {chat.unread_count}
                             </span>
                           )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Circle className={`w-2 h-2 ${getOnlineStatus(chat.last_seen).online ? 'text-green-500' : 'text-gray-400'} fill-current`} />
+                          <span className={`text-xs ${getOnlineStatus(chat.last_seen).color}`}>
+                            {getOnlineStatus(chat.last_seen).text}
+                          </span>
                         </div>
                         <p className="text-sm text-muted-foreground truncate">
                           {chat.last_message}
@@ -262,15 +322,44 @@ export default function Messages() {
                   >
                     <ArrowLeft className="w-5 h-5" />
                   </Button>
-                  <Avatar>
-                    <AvatarFallback>
-                      <User className="w-5 h-5" />
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium">
+                  
+                  <div className="relative">
+                    <Avatar 
+                      className="cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => navigate(`/profile/${selectedChat}`)}
+                    >
+                      <AvatarFallback>
+                        <User className="w-5 h-5" />
+                      </AvatarFallback>
+                    </Avatar>
+                    {/* Online indicator in header */}
+                    {(() => {
+                      const currentChat = chats.find(c => c.user_id === selectedChat);
+                      const status = getOnlineStatus(currentChat?.last_seen);
+                      return status.online && (
+                        <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-background rounded-full"></div>
+                      );
+                    })()}
+                  </div>
+                  
+                  <div className="flex-1 cursor-pointer" onClick={() => navigate(`/profile/${selectedChat}`)}>
+                    <p className="font-medium hover:text-primary transition-colors">
                       {chats.find(c => c.user_id === selectedChat)?.user_name || 'Користувач'}
                     </p>
+                    <div className="flex items-center gap-1">
+                      {(() => {
+                        const currentChat = chats.find(c => c.user_id === selectedChat);
+                        const status = getOnlineStatus(currentChat?.last_seen);
+                        return (
+                          <>
+                            <Circle className={`w-2 h-2 ${status.online ? 'text-green-500' : 'text-gray-400'} fill-current`} />
+                            <span className={`text-xs ${status.color}`}>
+                              {status.text}
+                            </span>
+                          </>
+                        );
+                      })()}
+                    </div>
                   </div>
                 </div>
 
@@ -294,24 +383,26 @@ export default function Messages() {
                             message.sender_id === user.id ? 'justify-end' : 'justify-start'
                           }`}
                         >
-                          <div
-                            className={`max-w-[70%] rounded-lg p-3 ${
-                              message.sender_id === user.id
-                                ? 'bg-primary text-primary-foreground'
-                                : 'bg-muted'
-                            }`}
-                          >
-                            <p className="break-words">{message.content}</p>
-                            <p className="text-xs opacity-70 mt-1">
-                              {formatDistanceToNow(new Date(message.created_at), {
-                                addSuffix: true,
-                                locale: uk,
-                              })}
-                            </p>
-                          </div>
+                                                  <div
+                          className={`max-w-[70%] rounded-lg p-3 break-words overflow-hidden ${
+                            message.sender_id === user.id
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-muted'
+                          }`}
+                        >
+                          <p className="break-words whitespace-pre-wrap">{message.content}</p>
+                          <p className="text-xs opacity-70 mt-1">
+                            {formatDistanceToNow(new Date(message.created_at), {
+                              addSuffix: true,
+                              locale: uk,
+                            })}
+                          </p>
+                        </div>
                         </div>
                       </div>
                     ))}
+                    {/* Scroll anchor */}
+                    <div ref={messagesEndRef} />
                   </div>
                 </ScrollArea>
 
