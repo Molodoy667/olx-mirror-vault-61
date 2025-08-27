@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JS Debug</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            background: #333; 
+            color: white;
+        }
+        .log { 
+            background: #222; 
+            padding: 10px; 
+            margin: 5px 0; 
+            border-radius: 3px; 
+            font-family: monospace;
+        }
+        .error { background: #722; }
+        .success { background: #272; }
+        .info { background: #227; }
+    </style>
+</head>
+<body>
+    <h1>🔍 JavaScript File Debug</h1>
+    <div id="logs"></div>
+    
+    <h2>Manual Tests:</h2>
+    <button onclick="testMainJS()">Load Main JS Manually</button>
+    <button onclick="testReactLoad()">Test React Loading</button>
+    <button onclick="simulateMainApp()">Simulate Main App</button>
+    
+    <script>
+        const logs = document.getElementById('logs');
+        
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `log ${type}`;
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logs.appendChild(div);
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+        
+        // Перехватываем все ошибки
+        window.addEventListener('error', (e) => {
+            log(`ERROR: ${e.message} at ${e.filename}:${e.lineno}`, 'error');
+        });
+        
+        window.addEventListener('unhandledrejection', (e) => {
+            log(`UNHANDLED PROMISE REJECTION: ${e.reason}`, 'error');
+        });
+        
+        log('Страница загружена, начинаем тесты', 'success');
+        
+        function testMainJS() {
+            log('Пытаемся загрузить главный JS файл...', 'info');
+            
+            // Создаем новый div#root для тестирования
+            const testRoot = document.createElement('div');
+            testRoot.id = 'test-root';
+            document.body.appendChild(testRoot);
+            
+            // Загружаем главный скрипт
+            const script = document.createElement('script');
+            script.type = 'module';
+            script.src = '/assets/index-CSeJ3J4N.js';
+            
+            script.onload = () => {
+                log('Главный JS файл загружен успешно', 'success');
+                
+                // Проверяем что появилось в test-root через 2 секунды
+                setTimeout(() => {
+                    if (testRoot.innerHTML.trim()) {
+                        log(`Контент появился в test-root: ${testRoot.innerHTML.substring(0, 100)}...`, 'success');
+                    } else {
+                        log('test-root остался пустым после загрузки JS', 'error');
+                    }
+                }, 2000);
+            };
+            
+            script.onerror = () => {
+                log('Ошибка загрузки главного JS файла', 'error');
+            };
+            
+            document.head.appendChild(script);
+        }
+        
+        function testReactLoad() {
+            log('Тестируем загрузку React из CDN...', 'info');
+            
+            // Загружаем React из CDN
+            const reactScript = document.createElement('script');
+            reactScript.src = 'https://unpkg.com/react@18/umd/react.development.js';
+            reactScript.onload = () => {
+                log('React загружен из CDN', 'success');
+                
+                const reactDomScript = document.createElement('script');
+                reactDomScript.src = 'https://unpkg.com/react-dom@18/umd/react-dom.development.js';
+                reactDomScript.onload = () => {
+                    log('ReactDOM загружен из CDN', 'success');
+                    log('React.version: ' + window.React.version, 'info');
+                };
+                document.head.appendChild(reactDomScript);
+            };
+            document.head.appendChild(reactScript);
+        }
+        
+        function simulateMainApp() {
+            log('Симулируем основное приложение...', 'info');
+            
+            // Создаем div#root как в основном приложении
+            let mainRoot = document.getElementById('main-root');
+            if (!mainRoot) {
+                mainRoot = document.createElement('div');
+                mainRoot.id = 'main-root';
+                document.body.appendChild(mainRoot);
+            }
+            
+            // Симулируем что делает main.tsx
+            try {
+                log('Создаем простой React компонент...', 'info');
+                
+                mainRoot.innerHTML = `
+                    <div style="padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px; margin: 20px 0;">
+                        <h2>🎉 Симуляция основного приложения</h2>
+                        <p>Если видите это, то проблема НЕ в создании элементов DOM</p>
+                        <p>Время: ${new Date().toLocaleString()}</p>
+                    </div>
+                `;
+                
+                log('Симуляция успешна - DOM элементы создаются', 'success');
+                
+            } catch (error) {
+                log(`Ошибка симуляции: ${error.message}`, 'error');
+            }
+        }
+        
+        // Автоматически запускаем базовые тесты
+        setTimeout(() => {
+            log('Запускаем автоматические тесты...', 'info');
+            testReactLoad();
+            setTimeout(testMainJS, 1000);
+        }, 1000);
+    </script>
+</body>
+</html>
