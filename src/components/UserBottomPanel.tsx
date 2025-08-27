@@ -16,21 +16,21 @@ export function UserBottomPanel() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Не показуємо панель для неавторизованих користувачів
-  if (!user) {
-    return null;
-  }
-
   // Додаємо padding-bottom до body для мобільних пристроїв
   useEffect(() => {
-    if (window.innerWidth < 768) { // md breakpoint
+    if (user && window.innerWidth < 768) { // md breakpoint
       document.body.style.paddingBottom = 'calc(80px + env(safe-area-inset-bottom, 0px))';
     }
     
     return () => {
       document.body.style.paddingBottom = '';
     };
-  }, []);
+  }, [user]);
+
+  // Не показуємо панель для неавторизованих користувачів
+  if (!user) {
+    return null;
+  }
 
   const menuItems = [
     {
