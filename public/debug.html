@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Page</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f0f0f0; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Vercel Debug Page</h1>
+    <div id="status">
+        <p class="info">📍 Путь: <span id="path"></span></p>
+        <p class="info">🌐 URL: <span id="url"></span></p>
+        <p class="info">📱 User Agent: <span id="ua"></span></p>
+    </div>
+    
+    <h2>Тесты:</h2>
+    <div id="tests">
+        <p class="success">✅ HTML загружается</p>
+    </div>
+    
+    <h2>Попытка загрузить главную страницу:</h2>
+    <div id="main-test">
+        <button onclick="testMain()">Проверить главную страницу</button>
+        <div id="main-result"></div>
+    </div>
+    
+    <script>
+        // Базовая информация
+        document.getElementById('path').textContent = window.location.pathname;
+        document.getElementById('url').textContent = window.location.href;
+        document.getElementById('ua').textContent = navigator.userAgent.substring(0, 100) + '...';
+        
+        const tests = document.getElementById('tests');
+        
+        // Тест localStorage
+        try {
+            localStorage.setItem('test', 'ok');
+            localStorage.removeItem('test');
+            tests.innerHTML += '<p class="success">✅ localStorage работает</p>';
+        } catch (e) {
+            tests.innerHTML += '<p class="error">❌ localStorage: ' + e.message + '</p>';
+        }
+        
+        // Тест fetch
+        if (typeof fetch !== 'undefined') {
+            tests.innerHTML += '<p class="success">✅ Fetch API доступен</p>';
+        } else {
+            tests.innerHTML += '<p class="error">❌ Fetch API недоступен</p>';
+        }
+        
+        // Проверка главной страницы
+        function testMain() {
+            const result = document.getElementById('main-result');
+            result.innerHTML = '<p class="info">🔄 Проверяем...</p>';
+            
+            fetch('/')
+                .then(response => {
+                    if (response.ok) {
+                        return response.text();
+                    } else {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                })
+                .then(html => {
+                    if (html.includes('<div id="root">')) {
+                        result.innerHTML = '<p class="success">✅ Главная страница загружается корректно</p>';
+                    } else {
+                        result.innerHTML = '<p class="error">❌ Главная страница не содержит div#root</p>';
+                    }
+                })
+                .catch(error => {
+                    result.innerHTML = '<p class="error">❌ Ошибка загрузки: ' + error.message + '</p>';
+                });
+        }
+        
+        // Автоматически тестируем главную страницу
+        setTimeout(testMain, 1000);
+    </script>
+</body>
+</html>
