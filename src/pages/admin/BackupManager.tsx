@@ -33,6 +33,15 @@ import {
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
+// Утилітарна функція для форматування розміру файлу
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
 interface BackupConfig {
   id: string;
   type: 'site' | 'database';
@@ -130,7 +139,23 @@ export default function BackupManager() {
     try {
       const savedBackups = localStorage.getItem('backup-list');
       if (savedBackups) {
-        setBackups(JSON.parse(savedBackups));
+        const backupList = JSON.parse(savedBackups);
+        // Перевіряємо та виправляємо бэкапи з нульовим розміром
+        const fixedBackups = backupList.map((backup: Backup) => {
+          if (backup.size === 0 && backup.data) {
+            // Перераховуємо розмір на основі даних
+            const dataBlob = new Blob([backup.data], { 
+              type: backup.type === 'database' ? 'application/sql' : 'application/json' 
+            });
+            return { ...backup, size: dataBlob.size };
+          }
+          return backup;
+        });
+        setBackups(fixedBackups);
+        // Зберігаємо виправлені дані назад
+        if (JSON.stringify(fixedBackups) !== JSON.stringify(backupList)) {
+          localStorage.setItem('backup-list', JSON.stringify(fixedBackups));
+        }
       }
     } catch (error) {
       console.error('Error loading backups:', error);
@@ -189,12 +214,12 @@ export default function BackupManager() {
         timestamp: new Date().toISOString(),
         version: '1.0.0',
         pages: [
-          { path: '/', title: 'Головна сторінка' },
-          { path: '/about', title: 'Про нас' },
-          { path: '/help', title: 'Допомога' }
+          'home', 'search', 'create', 'profile', 'messages', 
+          'favorites', 'about', 'help', 'auth'
         ],
         components: [
-          'Header', 'Footer', 'ListingCard', 'SearchBar'
+          'header', 'footer', 'sidebar', 'navigation',
+          'product-cards', 'forms', 'modals', 'dialogs'
         ],
         assets: [
           'images', 'icons', 'styles', 'scripts'
@@ -214,13 +239,13 @@ export default function BackupManager() {
         type: 'site',
         name: `Site Backup ${new Date().toLocaleDateString()}`,
         filename: `site-backup-${Date.now()}.json`,
-        size: siteBlob.size, // Реальний розмір
+        size: siteBlob.size,
         status: 'completed',
         created_at: new Date().toISOString(),
         completed_at: new Date().toISOString(),
         checksum: `sha256-${Math.random().toString(36).substring(2)}`,
         version: '1.0.0',
-        data: siteContent // Зберігаємо реальні дані
+        data: siteContent
       };
 
       const newBackups = [backup, ...backups];
@@ -265,7 +290,11 @@ CREATE TABLE IF NOT EXISTS profiles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email TEXT UNIQUE NOT NULL,
   full_name TEXT,
+  username TEXT UNIQUE,
   avatar_url TEXT,
+  location TEXT,
+  phone TEXT,
+  role TEXT DEFAULT 'user',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -277,27 +306,57 @@ CREATE TABLE IF NOT EXISTS listings (
   title TEXT NOT NULL,
   description TEXT,
   price DECIMAL(10,2),
-  category TEXT,
+  currency TEXT DEFAULT 'UAH',
+  category_id UUID,
   location TEXT,
   status TEXT DEFAULT 'active',
+  is_promoted BOOLEAN DEFAULT FALSE,
+  views INTEGER DEFAULT 0,
+  images TEXT[],
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Sample data
-INSERT INTO profiles (email, full_name) VALUES 
-  ('user1@example.com', 'Іван Петренко'),
-  ('user2@example.com', 'Марія Коваленко');
+-- Categories table
+CREATE TABLE IF NOT EXISTS categories (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name_uk TEXT NOT NULL,
+  name_en TEXT,
+  slug TEXT UNIQUE NOT NULL,
+  parent_id UUID REFERENCES categories(id),
+  icon_name TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
-INSERT INTO listings (user_id, title, description, price, category, location) VALUES
-  ('550e8400-e29b-41d4-a716-446655440000', 'iPhone 15 Pro', 'Новий iPhone в ідеальному стані', 45000.00, 'Електроніка', 'Київ'),
-  ('550e8400-e29b-41d4-a716-446655440001', 'MacBook Air M2', 'Легкий та потужний ноутбук', 65000.00, 'Електроніка', 'Львів');
+-- Messages table
+CREATE TABLE IF NOT EXISTS messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  sender_id UUID REFERENCES profiles(id),
+  receiver_id UUID REFERENCES profiles(id),
+  listing_id UUID REFERENCES listings(id),
+  content TEXT NOT NULL,
+  is_read BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Favorites table
+CREATE TABLE IF NOT EXISTS favorites (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES profiles(id),
+  listing_id UUID REFERENCES listings(id),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(user_id, listing_id)
+);
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_listings_user_id ON listings(user_id);
-CREATE INDEX IF NOT EXISTS idx_listings_category ON listings(category);
+CREATE INDEX IF NOT EXISTS idx_listings_category_id ON listings(category_id);
 CREATE INDEX IF NOT EXISTS idx_listings_location ON listings(location);
 CREATE INDEX IF NOT EXISTS idx_listings_status ON listings(status);
+CREATE INDEX IF NOT EXISTS idx_messages_sender_id ON messages(sender_id);
+CREATE INDEX IF NOT EXISTS idx_messages_receiver_id ON messages(receiver_id);
+CREATE INDEX IF NOT EXISTS idx_favorites_user_id ON favorites(user_id);
+CREATE INDEX IF NOT EXISTS idx_favorites_listing_id ON favorites(listing_id);
 
 -- Backup completed at ${new Date().toISOString()}`;
 
@@ -308,13 +367,13 @@ CREATE INDEX IF NOT EXISTS idx_listings_status ON listings(status);
         type: 'database',
         name: `Database Backup ${new Date().toLocaleDateString()}`,
         filename: `database-backup-${Date.now()}.sql`,
-        size: dbBlob.size, // Реальний розмір
+        size: dbBlob.size,
         status: 'completed',
         created_at: new Date().toISOString(),
         completed_at: new Date().toISOString(),
         checksum: `sha256-${Math.random().toString(36).substring(2)}`,
         version: '1.0.0',
-        data: dbData // Зберігаємо реальні дані
+        data: dbData
       };
 
       const newBackups = [backup, ...backups];
@@ -322,7 +381,7 @@ CREATE INDEX IF NOT EXISTS idx_listings_status ON listings(status);
       localStorage.setItem('backup-list', JSON.stringify(newBackups));
 
       toast({
-        title: "Бэкап бази створено",
+        title: "Бэкап бази даних створено",
         description: `Резервна копія бази даних успішно створена (${formatFileSize(dbBlob.size)})`,
       });
 
@@ -337,6 +396,8 @@ CREATE INDEX IF NOT EXISTS idx_listings_status ON listings(status);
       setBackupProgress(0);
     }
   };
+
+  // Створення реального бэкапу бази даних
 
   // Завантаження бэкапу
   const uploadBackup = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -356,6 +417,7 @@ CREATE INDEX IF NOT EXISTS idx_listings_status ON listings(status);
         size: file.size,
         status: 'completed',
         created_at: new Date().toISOString(),
+        completed_at: new Date().toISOString(),
         checksum: `sha256-${Math.random().toString(36).substring(2)}`,
         version: '1.0.0',
         data: fileContent // Зберігаємо реальні дані

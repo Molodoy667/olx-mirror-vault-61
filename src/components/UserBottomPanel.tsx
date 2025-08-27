@@ -10,6 +10,7 @@ import {
   User 
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getUserProfileUrl } from "@/utils/userUtils";
 
 export function UserBottomPanel() {
   const { user } = useAuth();
@@ -67,7 +68,7 @@ export function UserBottomPanel() {
     {
       icon: User,
       label: 'Профіль',
-      path: `/profile/${user.id}`,
+      path: getUserProfileUrl(user),
       color: 'text-orange-500'
     }
   ];

@@ -13,47 +13,79 @@ import { User, MapPin, Calendar, Package, Heart, Settings, Shield } from 'lucide
 import { formatDistanceToNow } from 'date-fns';
 import { BusinessUpgradeDialog } from '@/components/BusinessUpgradeDialog';
 import { VIPPromotionDialog } from '@/components/VIPPromotionDialog';
+import { generateShortId } from '@/utils/userUtils';
 
 export default function Profile() {
-  const { id } = useParams();
+  const { username } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const isOwnProfile = user?.id === id;
   const { isAdmin } = useAdmin();
 
   const { data: profile } = useQuery({
-    queryKey: ['profile', id],
+    queryKey: ['profile', username],
     queryFn: async () => {
-      const { data, error } = await supabase
+      if (!username) throw new Error('Username is required');
+      
+      // Сначала пробуем найти по username
+      let { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', id)
+        .eq('username', username)
         .single();
+      
+      // Если не найден и username состоит из 6 цифр, ищем по короткому ID
+      if (error && /^\d{6}$/.test(username)) {
+        const { data: allProfiles, error: allError } = await supabase
+          .from('profiles')
+          .select('*');
+        
+        if (!allError && allProfiles) {
+          // Ищем пользователя, чей короткий ID совпадает
+          const foundProfile = allProfiles.find(profile => 
+            generateShortId(profile.id) === username
+          );
+          
+          if (foundProfile) {
+            data = foundProfile;
+            error = null;
+          }
+        }
+      }
       
       if (error) throw error;
       return data;
     },
+    enabled: !!username,
   });
 
+  const isOwnProfile = profile ? (
+    user?.username === username || 
+    (!user?.username && generateShortId(user?.id || '') === username) ||
+    user?.id === profile.id
+  ) : false;
+
   const { data: listings } = useQuery({
-    queryKey: ['user-listings', id],
+    queryKey: ['user-listings', profile?.id],
     queryFn: async () => {
+      if (!profile?.id) return [];
+      
       const { data, error } = await supabase
         .from('listings')
         .select('*')
-        .eq('user_id', id)
+        .eq('user_id', profile.id)
         .eq('status', 'active')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       return data;
     },
+    enabled: !!profile?.id,
   });
 
   const { data: favorites } = useQuery({
-    queryKey: ['user-favorites', id],
+    queryKey: ['user-favorites', profile?.id],
     queryFn: async () => {
-      if (!isOwnProfile) return [];
+      if (!isOwnProfile || !profile?.id) return [];
       
       const { data, error } = await supabase
         .from('favorites')
@@ -70,7 +102,7 @@ export default function Profile() {
             created_at
           )
         `)
-        .eq('user_id', id);
+        .eq('user_id', profile.id);
       
       if (error) throw error;
       return data;

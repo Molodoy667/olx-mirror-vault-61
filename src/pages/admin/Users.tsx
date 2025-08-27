@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { Search, Edit, Trash2, Shield, User } from 'lucide-react';
+import { getUserProfileUrl } from '@/utils/userUtils';
 
 interface UserProfile {
   id: string;
@@ -238,7 +239,7 @@ export default function AdminUsers() {
                         <Button
                           variant="outline"
                           size="icon"
-                          onClick={() => navigate(`/profile/${user.id}`)}
+                          onClick={() => navigate(getUserProfileUrl(user))}
                           className="w-8 h-8"
                         >
                           <Edit className="w-3 h-3" />
