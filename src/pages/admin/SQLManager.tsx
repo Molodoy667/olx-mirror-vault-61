@@ -595,6 +595,16 @@ export default function SQLManager() {
                     Очистити
                   </Button>
                 </div>
+                
+                {/* Progress indicator для SQL виконання */}
+                {isExecuting && (
+                  <div className="space-y-2">
+                    <Progress value={100} className="w-full animate-pulse" />
+                    <p className="text-sm text-muted-foreground text-center">
+                      Виконується SQL запит...
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -827,8 +837,8 @@ export default function SQLManager() {
                         key={index}
                         className={`p-3 rounded-lg border ${
                           result.success 
-                            ? 'bg-green-50 border-green-200' 
-                            : 'bg-red-50 border-red-200'
+                            ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' 
+                            : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
                         }`}
                       >
                         <div className="flex items-start justify-between">
@@ -857,7 +867,7 @@ export default function SQLManager() {
                               {result.message}
                             </p>
                             {result.error && (
-                              <p className="text-sm text-red-600 bg-red-100 p-2 rounded">
+                              <p className="text-sm text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 p-2 rounded">
                                 {result.error}
                               </p>
                             )}
@@ -866,7 +876,7 @@ export default function SQLManager() {
                                 <summary className="cursor-pointer text-sm text-muted-foreground">
                                   Показати дані
                                 </summary>
-                                <pre className="text-xs bg-muted p-2 rounded mt-2 overflow-x-auto">
+                                <pre className="text-xs bg-muted dark:bg-muted/50 text-foreground p-2 rounded mt-2 overflow-x-auto">
                                   {JSON.stringify(result.data, null, 2)}
                                 </pre>
                               </details>
@@ -889,11 +899,12 @@ export default function SQLManager() {
             onFileExecute={(fileName, result) => {
               // Добавляем результат выполнения в историю
               const newResult: SQLResult = {
-                success: result.rowsAffected !== undefined,
+                success: result.success,
                 message: result.message,
                 data: result,
                 executionTime: result.executionTime,
-                rowsAffected: result.rowsAffected
+                rowsAffected: result.rowsAffected,
+                error: result.error
               };
               
               setResults(prev => [
