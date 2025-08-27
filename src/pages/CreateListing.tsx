@@ -207,7 +207,7 @@ export default function CreateListing() {
               <KatottgCityAutocomplete
                 value={formData.location}
                 onChange={(value) => setFormData({ ...formData, location: value })}
-                placeholder="Оберіть населений пункт..."
+                placeholder="Оберіть населений пункт або область"
                 className="w-full"
                 showRegionsOnEmpty={true}
               />

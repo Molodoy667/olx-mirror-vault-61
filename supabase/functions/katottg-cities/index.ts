@@ -144,13 +144,22 @@ function searchCities(query: string, limit = 20): FilteredCity[] {
   // Додаємо райони що підходять під запит
   Object.values(districtsMap).forEach(districtName => {
     if (districtName.toLowerCase().includes(normalizedQuery)) {
+      // Знаходимо область для цього району
+      let regionForDistrict = '';
+      for (const item of settlementsCache) {
+        if (item.district === districtName && item.region) {
+          regionForDistrict = item.region;
+          break;
+        }
+      }
+      
       results.push({
         code: `district_${districtName}`,
         name: districtName,
         type: 'р-н',
-        region: '',
+        region: regionForDistrict,
         district: districtName,
-        fullName: `${districtName} район`
+        fullName: regionForDistrict ? `${districtName} район, ${regionForDistrict}` : `${districtName} район`
       });
     }
   });
@@ -163,6 +172,61 @@ function searchCities(query: string, limit = 20): FilteredCity[] {
       results.push(s);
     }
   });
+
+  // Спеціальна логіка для великих міст - додаємо райони
+  if (normalizedQuery === 'київ' || normalizedQuery.includes('київ')) {
+    const kyivDistricts = [
+      'Голосіївський', 'Дарницький', 'Деснянський', 'Днípровський', 
+      'Оболонський', 'Печерський', 'Подільський', 'Святошинський', 
+      'Солом\'янський', 'Шевченківський'
+    ];
+    
+    kyivDistricts.forEach(district => {
+      results.push({
+        code: `kyiv_district_${district}`,
+        name: `${district} район`,
+        type: 'р-н',
+        region: 'м. Київ',
+        district: district,
+        fullName: `${district} район, м. Київ`
+      });
+    });
+  }
+
+  if (normalizedQuery === 'харків' || normalizedQuery.includes('харків')) {
+    const kharkivDistricts = [
+      'Київський', 'Холодногірський', 'Шевченківський', 'Слобідський',
+      'Немишлянський', 'Новобаварський', 'Основ\'янський', 'Інтичівський'
+    ];
+    
+    kharkivDistricts.forEach(district => {
+      results.push({
+        code: `kharkiv_district_${district}`,
+        name: `${district} район`,
+        type: 'р-н',
+        region: 'м. Харків',
+        district: district,
+        fullName: `${district} район, м. Харків`
+      });
+    });
+  }
+
+  if (normalizedQuery === 'одеса' || normalizedQuery.includes('одеса')) {
+    const odesaDistricts = [
+      'Київський', 'Малиновський', 'Приморський', 'Суворовський'
+    ];
+    
+    odesaDistricts.forEach(district => {
+      results.push({
+        code: `odesa_district_${district}`,
+        name: `${district} район`,
+        type: 'р-н',
+        region: 'м. Одеса',
+        district: district,
+        fullName: `${district} район, м. Одеса`
+      });
+    });
+  }
 
   // Сортуємо результати з пріоритетом як в тестовой версии
   return results
