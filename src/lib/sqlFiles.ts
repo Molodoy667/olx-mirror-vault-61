@@ -15,6 +15,9 @@ export interface SQLFile {
 // Пока что возвращаем статические данные
 export async function loadSQLFiles(): Promise<SQLFile[]> {
   try {
+    // Отримуємо список видалених файлів з localStorage
+    const deletedFiles = JSON.parse(localStorage.getItem('deletedSQLFiles') || '[]') as string[];
+    
     // В production это бы был API вызов к серверу
     // Для демонстрации возвращаем статические файлы
     const staticFiles: SQLFile[] = [
@@ -132,7 +135,10 @@ export async function loadSQLFiles(): Promise<SQLFile[]> {
       }
     ];
 
-    return staticFiles;
+    // Фільтруємо видалені файли
+    const filteredFiles = staticFiles.filter(file => !deletedFiles.includes(file.name));
+    
+    return filteredFiles;
   } catch (error) {
     console.error('Error loading SQL files:', error);
     return [];
@@ -957,11 +963,37 @@ export async function executeSQLFile(fileName: string, content: string): Promise
 }
 
 export async function deleteSQLFile(fileName: string): Promise<void> {
-  // В реальной среде здесь бы было удаление файла
-  // Для демонстрации просто симулируем задержку
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  if (Math.random() < 0.05) {
-    throw new Error('Не вдалося видалити файл: файл використовується іншим процесом');
+  try {
+    // Симулюємо затримку видалення
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Рідкісна симуляція помилки (5% випадків)
+    if (Math.random() < 0.05) {
+      throw new Error('Не вдалося видалити файл: файл використовується іншим процесом');
+    }
+
+    // Зберігаємо файл як видалений в localStorage
+    const deletedFiles = JSON.parse(localStorage.getItem('deletedSQLFiles') || '[]') as string[];
+    
+    if (!deletedFiles.includes(fileName)) {
+      deletedFiles.push(fileName);
+      localStorage.setItem('deletedSQLFiles', JSON.stringify(deletedFiles));
+    }
+
+    console.log(`Файл ${fileName} помічено як видалений`);
+  } catch (error) {
+    console.error('Помилка видалення файлу:', error);
+    throw error;
   }
+}
+
+// Функція для відновлення всіх видалених файлів (для розробки)
+export function restoreAllDeletedFiles(): void {
+  localStorage.removeItem('deletedSQLFiles');
+  console.log('Всі видалені файли відновлено');
+}
+
+// Функція для отримання списку видалених файлів
+export function getDeletedFiles(): string[] {
+  return JSON.parse(localStorage.getItem('deletedSQLFiles') || '[]');
 }

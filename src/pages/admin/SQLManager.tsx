@@ -6,7 +6,7 @@ import { AdminHeader } from '@/components/admin/AdminHeader';
 import { SQLFileManager } from '@/components/admin/SQLFileManager';
 import { DatabaseAnalyzer } from '@/components/admin/DatabaseAnalyzer';
 import { FullDatabaseManager } from '@/components/admin/FullDatabaseManager';
-import { DirectSQLClient } from '@/components/admin/DirectSQLClient';
+
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -54,7 +54,7 @@ interface TableInfo {
 
 export default function SQLManager() {
   const { isAdmin, isLoading: adminLoading } = useAdmin();
-  const [activeTab, setActiveTab] = useState<'sql-editor' | 'database-manager' | 'file-manager' | 'analyzer' | 'direct-sql'>('database-manager');
+  const [activeTab, setActiveTab] = useState<'sql-editor' | 'database-manager' | 'file-manager' | 'analyzer'>('database-manager');
   const [sqlQuery, setSqlQuery] = useState('');
   const [isExecuting, setIsExecuting] = useState(false);
   const [results, setResults] = useState<SQLResult[]>([]);
@@ -454,82 +454,75 @@ export default function SQLManager() {
       <Header />
       <AdminHeader />
       
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">SQL Менеджер</h1>
-          <p className="text-muted-foreground">
+      <div className="container mx-auto px-2 sm:px-4 lg:px-6 py-4 sm:py-8">
+        <div className="mb-4 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold mb-2">SQL Менеджер</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
             Повноцінне управління базою даних
           </p>
         </div>
 
-        {/* Система вкладок */}
-        <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
-          <nav className="flex space-x-8">
+        {/* Система вкладок - Responsive */}
+        <div className="border-b border-gray-200 dark:border-gray-700 mb-4 sm:mb-6">
+          <nav className="flex flex-wrap sm:flex-nowrap space-x-2 sm:space-x-8 overflow-x-auto"
+               style={{ scrollbarWidth: 'thin' }}>
             <button
               onClick={() => setActiveTab('database-manager')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              className={`flex-shrink-0 py-2 sm:py-3 px-2 sm:px-4 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
                 activeTab === 'database-manager'
                   ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                   : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
               }`}
             >
-              <div className="flex items-center space-x-2">
-                <Table className="h-4 w-4" />
-                <span>Управління БД</span>
+              <div className="flex items-center space-x-1 sm:space-x-2">
+                <Table className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Управління БД</span>
+                <span className="sm:hidden">БД</span>
               </div>
             </button>
             <button
               onClick={() => setActiveTab('sql-editor')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              className={`flex-shrink-0 py-2 sm:py-3 px-2 sm:px-4 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
                 activeTab === 'sql-editor'
                   ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                   : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
               }`}
             >
-              <div className="flex items-center space-x-2">
-                <FileCode className="h-4 w-4" />
-                <span>SQL Редактор</span>
+              <div className="flex items-center space-x-1 sm:space-x-2">
+                <FileCode className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">SQL Редактор</span>
+                <span className="sm:hidden">SQL</span>
               </div>
             </button>
             <button
               onClick={() => setActiveTab('file-manager')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              className={`flex-shrink-0 py-2 sm:py-3 px-2 sm:px-4 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
                 activeTab === 'file-manager'
                   ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                   : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
               }`}
             >
-              <div className="flex items-center space-x-2">
-                <FileText className="h-4 w-4" />
-                <span>Файл Менеджер</span>
+              <div className="flex items-center space-x-1 sm:space-x-2">
+                <FileText className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Файл Менеджер</span>
+                <span className="sm:hidden">Файли</span>
               </div>
             </button>
             <button
               onClick={() => setActiveTab('analyzer')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              className={`flex-shrink-0 py-2 sm:py-3 px-2 sm:px-4 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
                 activeTab === 'analyzer'
                   ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                   : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
               }`}
             >
-              <div className="flex items-center space-x-2">
-                <DatabaseIcon className="h-4 w-4" />
-                <span>Аналізатор БД</span>
+              <div className="flex items-center space-x-1 sm:space-x-2">
+                <DatabaseIcon className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Аналізатор БД</span>
+                <span className="sm:hidden">Аналіз</span>
               </div>
             </button>
-            <button
-              onClick={() => setActiveTab('direct-sql')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'direct-sql'
-                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-              }`}
-            >
-              <div className="flex items-center space-x-2">
-                <Database className="h-4 w-4" />
-                <span>Прямий SQL</span>
-              </div>
-            </button>
+
           </nav>
         </div>
 
@@ -539,7 +532,7 @@ export default function SQLManager() {
         )}
 
         {activeTab === 'sql-editor' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-8">
           {/* Ліва колонка - SQL редактор та файли */}
           <div className="space-y-6">
             {/* SQL редактор */}
@@ -914,9 +907,7 @@ export default function SQLManager() {
           />
         )}
 
-        {activeTab === 'direct-sql' && (
-          <DirectSQLClient />
-        )}
+
       </div>
     </div>
   );

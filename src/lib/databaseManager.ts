@@ -208,18 +208,59 @@ export const databaseManager = {
   // Отримання всіх функцій БД
   async getAllFunctions(): Promise<FunctionInfo[]> {
     try {
+      // Спочатку пробуємо RPC функцію
       const { data, error } = await supabase
         .rpc('get_all_functions');
 
-      if (error) {
-        console.error('Помилка отримання функцій:', error);
-        throw new Error(`Помилка отримання функцій: ${error.message}`);
+      if (data && !error) {
+        return data;
       }
 
-      return data || [];
+      console.warn('RPC get_all_functions недоступна, використовуємо fallback');
+      
+      // Fallback: простий запит до information_schema
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from('information_schema.routines')
+        .select(`
+          routine_name,
+          routine_type,
+          data_type,
+          routine_definition
+        `)
+        .eq('routine_schema', 'public')
+        .not('routine_name', 'like', 'pg_%');
+
+      if (fallbackError) {
+        console.error('Fallback помилка отримання функцій:', fallbackError);
+        // Повертаємо пустий масив замість помилки
+        return [];
+      }
+
+      // Перетворюємо fallback дані у правильний формат
+      return (fallbackData || []).map((func: any) => ({
+        function_name: func.routine_name || 'Unknown',
+        function_type: func.routine_type?.toLowerCase() || 'function',
+        return_type: func.data_type || 'void',
+        arguments: '',
+        language: 'sql',
+        source_code: func.routine_definition || 'Код недоступний',
+        owner: 'public',
+        description: `${func.routine_type}: ${func.routine_name}`
+      }));
+
     } catch (error) {
       console.error('Критична помилка getAllFunctions:', error);
-      throw error;
+      // Повертаємо помилку як єдину функцію для відображення
+      return [{
+        function_name: 'ERROR',
+        function_type: 'error',
+        return_type: 'void',
+        arguments: '',
+        language: 'unknown',
+        source_code: `Помилка завантаження функцій: ${error}`,
+        owner: 'system',
+        description: 'Функції недоступні'
+      }];
     }
   },
 
