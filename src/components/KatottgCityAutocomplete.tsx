@@ -37,6 +37,17 @@ export function KatottgCityAutocomplete({
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
+  // Принудительно загружаем регионы при открытии если showRegionsOnEmpty=true
+  const handlePopoverOpen = (isOpen: boolean) => {
+    setOpen(isOpen);
+    if (isOpen && showRegionsOnEmpty && searchValue === '' && cities.length === 0) {
+      console.log('KatottgCityAutocomplete: Popover opened, forcing regions load...');
+      // Триггерим загрузку через изменение searchValue и сразу возвращаем обратно
+      setSearchValue(' ');
+      setTimeout(() => setSearchValue(''), 0);
+    }
+  };
+
   // Функция клиентской сортировки (как в тестовой версии что работала)
   const sortCitiesByPriority = (cities: KatottgCity[], query: string) => {
     const normalizedQuery = query.toLowerCase().trim();
@@ -81,8 +92,17 @@ export function KatottgCityAutocomplete({
         return;
       }
 
+      // Если показываем области и поле пустое - вызываем функцию с пустым запросом
+      // Если запрос короткий (менее 2 символов) и не пустой - не показываем ничего
+      if (searchValue.length > 0 && searchValue.length < 2) {
+        setCities([]);
+        return;
+      }
+
       setLoading(true);
       try {
+        console.log(`KatottgCityAutocomplete: Fetching cities for query: "${searchValue}", showRegionsOnEmpty: ${showRegionsOnEmpty}`);
+        
         // Вызываем edge функцию для получения реальных данных
         const { data, error } = await supabase.functions.invoke('katottg-cities', {
           body: { query: searchValue }
@@ -100,10 +120,12 @@ export function KatottgCityAutocomplete({
         }
 
         const rawCities = data.cities || [];
+        console.log(`KatottgCityAutocomplete: Received ${rawCities.length} cities from Edge Function`);
         
         // Применяем клиентскую сортировку поверх данных от сервера
         // Это гарантирует правильный порядок независимо от серверной сортировки
         const sortedCities = sortCitiesByPriority(rawCities, searchValue);
+        console.log(`KatottgCityAutocomplete: After sorting: ${sortedCities.length} cities`);
         
         setCities(sortedCities);
 
@@ -142,7 +164,7 @@ export function KatottgCityAutocomplete({
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handlePopoverOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"

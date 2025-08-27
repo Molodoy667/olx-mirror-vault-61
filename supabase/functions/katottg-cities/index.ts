@@ -35,7 +35,11 @@ async function loadKatottgData() {
 
   try {
     console.log('Loading KATOTTG data (official registry JSON)...');
-    const response = await fetch('https://cdn.jsdelivr.net/gh/kaminarifox/katottg-json@main/katottg.min.json');
+    const response = await fetch('https://cdn.jsdelivr.net/gh/kaminarifox/katottg-json@main/katottg.min.json', {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; KATOTTG-Cities-Function/1.0)'
+      }
+    });
     
     if (!response.ok) {
       throw new Error(`Failed to fetch KATOTTG data: ${response.status}`);
@@ -85,6 +89,11 @@ async function loadKatottgData() {
       const district = districtsMap[it.level2] ?? '';
       const fullName = region ? `${typeName} ${name}, ${region}` : `${typeName} ${name}`;
 
+      // Debug для великих міст
+      if (['Київ', 'Харків', 'Одеса', 'Дніпро', 'Львів'].includes(name)) {
+        console.log(`Major city found: ${name}, category: ${category}, type: ${typeName}, region: ${region}`);
+      }
+
       settlementsCache.push({
         code,
         name,
@@ -96,10 +105,109 @@ async function loadKatottgData() {
     }
 
     dataLoaded = true;
-    console.log(`Loaded settlements: ${settlementsCache.length}; regions: ${Object.keys(regionsMap).length}; districts: ${Object.keys(districtsMap).length}`);
+    console.log(`KATOTTG Data loaded successfully:`);
+    console.log(`- Settlements: ${settlementsCache.length}`);
+    console.log(`- Regions: ${Object.keys(regionsMap).length}`);
+    console.log(`- Districts: ${Object.keys(districtsMap).length}`);
+    console.log(`- Sample regions:`, Object.values(regionsMap).slice(0, 5));
   } catch (error) {
     console.error('Error loading KATOTTG data:', error);
-    throw error;
+    
+    // Fallback: create basic Ukrainian regions manually
+    console.log('Loading fallback regions...');
+    const fallbackRegions = [
+      'Вінницька', 'Волинська', 'Дніпропетровська', 'Донецька', 'Житомирська',
+      'Закарпатська', 'Запорізька', 'Івано-Франківська', 'Київська', 'Кіровоградська',
+      'Луганська', 'Львівська', 'Миколаївська', 'Одеська', 'Полтавська',
+      'Рівненська', 'Сумська', 'Тернопільська', 'Харківська', 'Херсонська',
+      'Хмельницька', 'Черкаська', 'Чернівецька', 'Чернігівська'
+    ];
+    
+    regionsMap = {};
+    fallbackRegions.forEach((region, index) => {
+      regionsMap[`region_${index}`] = region;
+    });
+    
+    // Add major cities manually
+    const majorCities = [
+      { name: 'Київ', region: 'м. Київ', type: 'м.' },
+      { name: 'Харків', region: 'Харківська', type: 'м.' },
+      { name: 'Одеса', region: 'Одеська', type: 'м.' },
+      { name: 'Дніпро', region: 'Дніпропетровська', type: 'м.' },
+      { name: 'Львів', region: 'Львівська', type: 'м.' },
+      { name: 'Запоріжжя', region: 'Запорізька', type: 'м.' },
+      { name: 'Кривий Ріг', region: 'Дніпропетровська', type: 'м.' },
+      { name: 'Миколаїв', region: 'Миколаївська', type: 'м.' },
+      { name: 'Маріуполь', region: 'Донецька', type: 'м.' },
+      { name: 'Луганск', region: 'Луганська', type: 'м.' },
+      { name: 'Вінниця', region: 'Вінницька', type: 'м.' },
+      { name: 'Макіївка', region: 'Донецька', type: 'м.' },
+      { name: 'Севастополь', region: 'АР Крим', type: 'м.' },
+      { name: 'Сімферополь', region: 'АР Крим', type: 'м.' },
+      { name: 'Херсон', region: 'Херсонська', type: 'м.' },
+      { name: 'Полтава', region: 'Полтавська', type: 'м.' },
+      { name: 'Чернігів', region: 'Чернігівська', type: 'м.' },
+      { name: 'Черкаси', region: 'Черкаська', type: 'м.' },
+      { name: 'Житомир', region: 'Житомирська', type: 'м.' },
+      { name: 'Суми', region: 'Сумська', type: 'м.' },
+      { name: 'Хмельницький', region: 'Хмельницька', type: 'м.' },
+      { name: 'Чернівці', region: 'Чернівецька', type: 'м.' },
+      { name: 'Рівне', region: 'Рівненська', type: 'м.' },
+      { name: 'Кам\'янське', region: 'Дніпропетровська', type: 'м.' },
+      { name: 'Кропивницький', region: 'Кіровоградська', type: 'м.' },
+      { name: 'Івано-Франківськ', region: 'Івано-Франківська', type: 'м.' },
+      { name: 'Кременчук', region: 'Полтавська', type: 'м.' },
+      { name: 'Тернопіль', region: 'Тернопільська', type: 'м.' },
+      { name: 'Луцьк', region: 'Волинська', type: 'м.' },
+      { name: 'Біла Церква', region: 'Київська', type: 'м.' },
+      { name: 'Краматорськ', region: 'Донецька', type: 'м.' },
+      { name: 'Мелітополь', region: 'Запорізька', type: 'м.' },
+      { name: 'Керч', region: 'АР Крим', type: 'м.' },
+      { name: 'Словʼянськ', region: 'Донецька', type: 'м.' },
+      { name: 'Ужгород', region: 'Закарпатська', type: 'м.' },
+      { name: 'Бердянськ', region: 'Запорізька', type: 'м.' },
+      { name: 'Алчевськ', region: 'Луганська', type: 'м.' },
+      { name: 'Павлоград', region: 'Дніпропетровська', type: 'м.' },
+      { name: 'Сєвєродонецьк', region: 'Луганська', type: 'м.' },
+      { name: 'Євпаторія', region: 'АР Крим', type: 'м.' },
+      { name: 'Лисичанськ', region: 'Луганська', type: 'м.' },
+      { name: 'Кам\'янець-Подільський', region: 'Хмельницька', type: 'м.' },
+      { name: 'Бровари', region: 'Київська', type: 'м.' },
+      { name: 'Дрогобич', region: 'Львівська', type: 'м.' },
+      { name: 'Конотоп', region: 'Сумська', type: 'м.' },
+      { name: 'Нікополь', region: 'Дніпропетровська', type: 'м.' },
+      { name: 'Ялта', region: 'АР Крим', type: 'м.' },
+      { name: 'Новомосковськ', region: 'Дніпропетровська', type: 'м.' },
+      { name: 'Стрий', region: 'Львівська', type: 'м.' },
+      { name: 'Мукачево', region: 'Закарпатська', type: 'м.' },
+      { name: 'Коломия', region: 'Івано-Франківська', type: 'м.' },
+      { name: 'Умань', region: 'Черкаська', type: 'м.' },
+      { name: 'Бердичів', region: 'Житомирська', type: 'м.' },
+      { name: 'Калуш', region: 'Івано-Франківська', type: 'м.' },
+      { name: 'Апостолове', region: 'Дніпропетровська', type: 'м.' },
+      { name: 'Червоноград', region: 'Львівська', type: 'м.' },
+      { name: 'Фастів', region: 'Київська', type: 'м.' },
+      { name: 'Рубіжне', region: 'Луганська', type: 'м.' },
+      { name: 'Южне', region: 'Одеська', type: 'м.' },
+      { name: 'Ладижин', region: 'Вінницька', type: 'м.' },
+      { name: 'Львівська', region: 'Львівська', type: 'обл.' },
+      { name: 'Харківська', region: 'Харківська', type: 'обл.' },
+      { name: 'Одеська', region: 'Одеська', type: 'обл.' },
+      { name: 'Дніпропетровська', region: 'Дніпропетровська', type: 'обл.' },
+      { name: 'Київська', region: 'Київська', type: 'обл.' }
+    ];
+    
+    settlementsCache = majorCities.map((city, index) => ({
+      code: `fallback_city_${index}`,
+      name: city.name,
+      type: city.type,
+      region: city.region,
+      district: '',
+      fullName: `${city.type} ${city.name}, ${city.region}`
+    }));
+    
+    dataLoaded = true;
+    console.log(`Loaded fallback data: ${Object.keys(regionsMap).length} regions, ${settlementsCache.length} cities`);
   }
 }
 
@@ -108,7 +216,7 @@ function searchCities(query: string, limit = 20): FilteredCity[] {
   
   // Якщо немає запиту, повертаємо області
   if (normalizedQuery.length === 0) {
-    return Object.values(regionsMap)
+    const regions = Object.values(regionsMap)
       .map(regionName => ({
         code: `region_${regionName}`,
         name: regionName,
@@ -119,6 +227,9 @@ function searchCities(query: string, limit = 20): FilteredCity[] {
       }))
       .sort((a, b) => a.name.localeCompare(b.name, 'uk'))
       .slice(0, limit);
+    
+    console.log(`Returning ${regions.length} regions for empty query. Regions available: ${Object.keys(regionsMap).length}`);
+    return regions;
   }
 
   if (normalizedQuery.length < 2) {
@@ -228,8 +339,15 @@ function searchCities(query: string, limit = 20): FilteredCity[] {
     });
   }
 
+  // Видаляємо дублікати перед сортуванням
+  const uniqueResults = results.filter((item, index, self) => 
+    index === self.findIndex(t => t.fullName === item.fullName)
+  );
+
+  console.log(`Before deduplication: ${results.length}, after: ${uniqueResults.length} results for query: "${normalizedQuery}"`);
+
   // Сортуємо результати з пріоритетом як в тестовой версии
-  return results
+  return uniqueResults
     .sort((a, b) => {
       // Exact name matches first
       const aExact = a.name.toLowerCase() === normalizedQuery;
