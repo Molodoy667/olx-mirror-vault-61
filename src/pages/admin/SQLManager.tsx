@@ -3,6 +3,7 @@ import { useAdmin } from '@/hooks/useAdmin';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { AdminHeader } from '@/components/admin/AdminHeader';
+import { SQLFileManager } from '@/components/admin/SQLFileManager';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -789,6 +790,29 @@ export default function SQLManager() {
                 )}
               </CardContent>
             </Card>
+
+            {/* SQL File Manager */}
+            <SQLFileManager 
+              onFileExecute={(fileName, result) => {
+                // Добавляем результат выполнения в историю
+                const newResult: SQLResult = {
+                  success: result.rowsAffected !== undefined,
+                  message: result.message,
+                  data: result,
+                  executionTime: result.executionTime,
+                  rowsAffected: result.rowsAffected
+                };
+                
+                setResults(prev => [
+                  {
+                    ...newResult,
+                    query: `-- Executed from file: ${fileName}`,
+                    timestamp: new Date()
+                  },
+                  ...prev
+                ]);
+              }}
+            />
           </div>
         </div>
       </div>
