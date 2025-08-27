@@ -13,6 +13,7 @@ import { User, MapPin, Calendar, Package, Heart, Settings, Shield } from 'lucide
 import { formatDistanceToNow } from 'date-fns';
 import { BusinessUpgradeDialog } from '@/components/BusinessUpgradeDialog';
 import { VIPPromotionDialog } from '@/components/VIPPromotionDialog';
+import { generateShortId } from '@/utils/userUtils';
 
 export default function Profile() {
   const { username } = useParams();
@@ -25,11 +26,31 @@ export default function Profile() {
     queryFn: async () => {
       if (!username) throw new Error('Username is required');
       
-      const { data, error } = await supabase
+      // Сначала пробуем найти по username
+      let { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('username', username)
         .single();
+      
+      // Если не найден и username состоит из 6 цифр, ищем по короткому ID
+      if (error && /^\d{6}$/.test(username)) {
+        const { data: allProfiles, error: allError } = await supabase
+          .from('profiles')
+          .select('*');
+        
+        if (!allError && allProfiles) {
+          // Ищем пользователя, чей короткий ID совпадает
+          const foundProfile = allProfiles.find(profile => 
+            generateShortId(profile.id) === username
+          );
+          
+          if (foundProfile) {
+            data = foundProfile;
+            error = null;
+          }
+        }
+      }
       
       if (error) throw error;
       return data;
@@ -37,7 +58,11 @@ export default function Profile() {
     enabled: !!username,
   });
 
-  const isOwnProfile = user?.username === username;
+  const isOwnProfile = profile ? (
+    user?.username === username || 
+    (!user?.username && generateShortId(user?.id || '') === username) ||
+    user?.id === profile.id
+  ) : false;
 
   const { data: listings } = useQuery({
     queryKey: ['user-listings', profile?.id],

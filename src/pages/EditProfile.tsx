@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { User, MapPin, Phone, Upload } from 'lucide-react';
+import { getUserProfileUrl } from '@/utils/userUtils';
 
 export default function EditProfile() {
   const navigate = useNavigate();
@@ -113,9 +114,9 @@ export default function EditProfile() {
         description: "Ваші дані успішно збережено",
       });
 
-      // Navigate to profile with username or fallback to ID
-      const profilePath = formData.username ? `/profile/@${formData.username}` : `/profile/@${user.id}`;
-      navigate(profilePath);
+      // Navigate to profile with updated data
+      const updatedUser = { ...user, username: formData.username };
+      navigate(getUserProfileUrl(updatedUser));
     } catch (error: any) {
       toast({
         title: "Помилка",
