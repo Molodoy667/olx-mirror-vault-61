@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Page</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .error { color: red; margin: 10px 0; }
+        .success { color: green; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>Диагностика проекта</h1>
+    <div id="status">Загрузка...</div>
+    
+    <script>
+        const status = document.getElementById('status');
+        
+        // Проверяем базовые функции
+        status.innerHTML = '<div class="success">✅ HTML загрузился</div>';
+        
+        // Проверяем поддержку ES6
+        try {
+            const test = () => 'ES6 работает';
+            status.innerHTML += '<div class="success">✅ ES6 поддерживается</div>';
+        } catch (e) {
+            status.innerHTML += '<div class="error">❌ ES6 не поддерживается: ' + e.message + '</div>';
+        }
+        
+        // Проверяем localStorage
+        try {
+            localStorage.setItem('test', 'value');
+            localStorage.removeItem('test');
+            status.innerHTML += '<div class="success">✅ localStorage работает</div>';
+        } catch (e) {
+            status.innerHTML += '<div class="error">❌ localStorage не работает: ' + e.message + '</div>';
+        }
+        
+        // Проверяем fetch API
+        if (typeof fetch !== 'undefined') {
+            status.innerHTML += '<div class="success">✅ Fetch API доступен</div>';
+        } else {
+            status.innerHTML += '<div class="error">❌ Fetch API недоступен</div>';
+        }
+        
+        // Пробуем загрузить главный JS файл
+        const script = document.createElement('script');
+        script.type = 'module';
+        script.src = '/assets/index-BNKZlZpe.js';
+        script.onload = () => {
+            status.innerHTML += '<div class="success">✅ Главный JS файл загрузился</div>';
+        };
+        script.onerror = () => {
+            status.innerHTML += '<div class="error">❌ Не удалось загрузить главный JS файл</div>';
+        };
+        document.head.appendChild(script);
+        
+        // Проверяем ошибки консоли
+        window.addEventListener('error', (e) => {
+            status.innerHTML += '<div class="error">❌ Ошибка JavaScript: ' + e.message + '</div>';
+        });
+        
+        window.addEventListener('unhandledrejection', (e) => {
+            status.innerHTML += '<div class="error">❌ Необработанная ошибка Promise: ' + e.reason + '</div>';
+        });
+    </script>
+</body>
+</html>
