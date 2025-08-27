@@ -8,6 +8,8 @@ import { ScrollToTopRouter } from "@/components/ScrollToTopRouter";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { UserBottomPanel } from "@/components/UserBottomPanel";
 import { AdminRoute } from "@/components/AdminRoute";
+import { Layout } from "@/components/Layout";
+import { lazyWithRetry } from "@/components/LazyRetry";
 
 // Lazy load all pages for better performance
 const Home = lazy(() => import("./pages/Home"));
@@ -19,19 +21,19 @@ const CreateListing = lazy(() => import("./pages/CreateListing"));
 const Profile = lazy(() => import("./pages/Profile"));
 const EditProfile = lazy(() => import("./pages/EditProfile"));
 const EditListing = lazy(() => import("./pages/EditListing"));
-const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
-const AdminUsers = lazy(() => import("./pages/admin/Users"));
-const AdminListings = lazy(() => import("./pages/admin/Listings"));
-const AdminCategories = lazy(() => import("./pages/admin/Categories"));
-const AdminReports = lazy(() => import("./pages/admin/Reports"));
-const AdminAnalytics = lazy(() => import("./pages/admin/Analytics"));
-const AdminTariffs = lazy(() => import("./pages/admin/Tariffs"));
-const AdminBusinessVerifications = lazy(() => import("./pages/admin/BusinessVerifications"));
-const AdminMessages = lazy(() => import("./pages/admin/Messages"));
-const AdminSettings = lazy(() => import("./pages/admin/Settings"));
-const AdminModeration = lazy(() => import("./pages/admin/Moderation"));
-const SQLManager = lazy(() => import("./pages/admin/SQLManager"));
-const BackupManager = lazy(() => import("./pages/admin/BackupManager"));
+const AdminDashboard = lazyWithRetry(() => import("./pages/admin/Dashboard"));
+const AdminUsers = lazyWithRetry(() => import("./pages/admin/Users"));
+const AdminListings = lazyWithRetry(() => import("./pages/admin/Listings"));
+const AdminCategories = lazyWithRetry(() => import("./pages/admin/Categories"));
+const AdminReports = lazyWithRetry(() => import("./pages/admin/Reports"));
+const AdminAnalytics = lazyWithRetry(() => import("./pages/admin/Analytics"));
+const AdminTariffs = lazyWithRetry(() => import("./pages/admin/Tariffs"));
+const AdminBusinessVerifications = lazyWithRetry(() => import("./pages/admin/BusinessVerifications"));
+const AdminMessages = lazyWithRetry(() => import("./pages/admin/Messages"));
+const AdminSettings = lazyWithRetry(() => import("./pages/admin/Settings"));
+const AdminModeration = lazyWithRetry(() => import("./pages/admin/Moderation"));
+const SQLManager = lazyWithRetry(() => import("./pages/admin/SQLManager"));
+const BackupManager = lazyWithRetry(() => import("./pages/admin/BackupManager"));
 const CategoryPage = lazy(() => import("./pages/CategoryPage"));
 const About = lazy(() => import("./pages/About"));
 const Help = lazy(() => import("./pages/Help"));
@@ -68,52 +70,53 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <ScrollToTopRouter />
-          <Suspense fallback={<PageFallback />}>
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/home" element={<Home />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/search" element={<Search />} />
-              <Route path="/create" element={<CreateListing />} />
-              <Route path="/profile/:id" element={<Profile />} />
-              <Route path="/edit-profile" element={<EditProfile />} />
-              <Route path="/edit/:id" element={<EditListing />} />
-              <Route path="/category/:slug" element={<CategoryPage />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/help" element={<Help />} />
-              <Route path="/favorites" element={<Favorites />} />
-              <Route path="/messages/:userId?" element={<Messages />} />
-              <Route path="/my-listings" element={<MyListings />} />
-              <Route path="/saved-searches" element={<SavedSearches />} />
-              <Route path="/chat" element={<Chat />} />
-              <Route path="/novado-pro" element={<NovadoPro />} />
-              <Route path="/listing/:id" element={<ListingDetail />} />
-              
-              {/* Admin Routes */}
-              <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-              <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
-              <Route path="/admin/listings" element={<AdminRoute><AdminListings /></AdminRoute>} />
-              <Route path="/admin/categories" element={<AdminRoute><AdminCategories /></AdminRoute>} />
-              <Route path="/admin/reports" element={<AdminRoute><AdminReports /></AdminRoute>} />
-              <Route path="/admin/analytics" element={<AdminRoute><AdminAnalytics /></AdminRoute>} />
-              <Route path="/admin/tariffs" element={<AdminRoute><AdminTariffs /></AdminRoute>} />
-              <Route path="/admin/business-verifications" element={<AdminRoute><AdminBusinessVerifications /></AdminRoute>} />
-              <Route path="/admin/messages" element={<AdminRoute><AdminMessages /></AdminRoute>} />
-              <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
-              <Route path="/admin/moderation" element={<AdminRoute><AdminModeration /></AdminRoute>} />
-              <Route path="/admin/sql-manager" element={<AdminRoute><SQLManager /></AdminRoute>} />
-              <Route path="/admin/backup-manager" element={<AdminRoute><BackupManager /></AdminRoute>} />
-              
-              {/* SEO-friendly listing routes - must be after all specific routes */}
-              <Route path="/:slug" element={<ListingDetail />} />
-              
-              {/* Catch-all route for 404 */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-          <UserBottomPanel />
+          <Layout>
+            <Suspense fallback={<PageFallback />}>
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/home" element={<Home />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/search" element={<Search />} />
+                <Route path="/create" element={<CreateListing />} />
+                <Route path="/profile/:id" element={<Profile />} />
+                <Route path="/edit-profile" element={<EditProfile />} />
+                <Route path="/edit/:id" element={<EditListing />} />
+                <Route path="/category/:slug" element={<CategoryPage />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/help" element={<Help />} />
+                <Route path="/favorites" element={<Favorites />} />
+                <Route path="/messages/:userId?" element={<Messages />} />
+                <Route path="/my-listings" element={<MyListings />} />
+                <Route path="/saved-searches" element={<SavedSearches />} />
+                <Route path="/chat" element={<Chat />} />
+                <Route path="/novado-pro" element={<NovadoPro />} />
+                <Route path="/listing/:id" element={<ListingDetail />} />
+                
+                {/* Admin Routes */}
+                <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+                <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
+                <Route path="/admin/listings" element={<AdminRoute><AdminListings /></AdminRoute>} />
+                <Route path="/admin/categories" element={<AdminRoute><AdminCategories /></AdminRoute>} />
+                <Route path="/admin/reports" element={<AdminRoute><AdminReports /></AdminRoute>} />
+                <Route path="/admin/analytics" element={<AdminRoute><AdminAnalytics /></AdminRoute>} />
+                <Route path="/admin/tariffs" element={<AdminRoute><AdminTariffs /></AdminRoute>} />
+                <Route path="/admin/business-verifications" element={<AdminRoute><AdminBusinessVerifications /></AdminRoute>} />
+                <Route path="/admin/messages" element={<AdminRoute><AdminMessages /></AdminRoute>} />
+                <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
+                <Route path="/admin/moderation" element={<AdminRoute><AdminModeration /></AdminRoute>} />
+                <Route path="/admin/sql-manager" element={<AdminRoute><SQLManager /></AdminRoute>} />
+                <Route path="/admin/backup-manager" element={<AdminRoute><BackupManager /></AdminRoute>} />
+                
+                {/* SEO-friendly listing routes - must be after all specific routes */}
+                <Route path="/:slug" element={<ListingDetail />} />
+                
+                {/* Catch-all route for 404 */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+          </Layout>
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>
