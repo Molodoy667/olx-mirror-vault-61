@@ -38,6 +38,34 @@ export async function loadSQLFiles(): Promise<SQLFile[]> {
         size: 512,
         lastModified: new Date(Date.now() - 172800000).toISOString(), 
         status: 'idle'
+      },
+      {
+        name: 'database_schema_analysis.sql',
+        content: await getFileContent('database_schema_analysis.sql'),
+        size: 4096,
+        lastModified: new Date().toISOString(),
+        status: 'idle'
+      },
+      {
+        name: 'quick_schema_check.sql',
+        content: await getFileContent('quick_schema_check.sql'),
+        size: 2048,
+        lastModified: new Date().toISOString(),
+        status: 'idle'
+      },
+      {
+        name: '20250128_create_schema_views.sql',
+        content: await getFileContent('20250128_create_schema_views.sql'),
+        size: 8192,
+        lastModified: new Date().toISOString(),
+        status: 'idle'
+      },
+      {
+        name: '20250128_improve_performance.sql',
+        content: await getFileContent('20250128_improve_performance.sql'),
+        size: 6144,
+        lastModified: new Date().toISOString(),
+        status: 'idle'
       }
     ];
 
@@ -141,7 +169,113 @@ CREATE TRIGGER trigger_auto_generate_slug
 -- Обновляем статистику таблиц
 ANALYZE listings;
 
-SELECT 'SEO migration applied successfully' as result;`
+SELECT 'SEO migration applied successfully' as result;`,
+
+    'database_schema_analysis.sql': `-- Повний аналіз схеми бази даних
+-- Використовуйте цей файл для детального вивчення структури БД
+
+-- 1. ВСІ ТАБЛИЦІ В БД
+SELECT tablename as "📁 Таблиці" FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename;
+
+-- 2. КОЛОНКИ КОЖНОЇ ТАБЛИЦІ  
+SELECT 
+  table_name as "🏗️ Таблиця",
+  column_name as "📋 Колонка", 
+  data_type as "📊 Тип",
+  is_nullable as "❓ NULL",
+  column_default as "🔧 За замовчуванням"
+FROM information_schema.columns 
+WHERE table_schema = 'public' 
+ORDER BY table_name, ordinal_position;
+
+-- 3. FOREIGN KEY ЗВ'ЯЗКИ
+SELECT 
+  tc.table_name as "📝 Таблиця",
+  kcu.column_name as "🔗 Колонка",
+  ccu.table_name as "🎯 Зовнішня таблиця",
+  ccu.column_name as "🎯 Зовнішня колонка"
+FROM information_schema.table_constraints tc
+JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
+JOIN information_schema.constraint_column_usage ccu ON ccu.constraint_name = tc.constraint_name
+WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_schema = 'public';`,
+
+    'quick_schema_check.sql': `-- Швидка перевірка основних таблиць
+-- Запустіть для швидкого огляду БД
+
+-- Список всіх таблиць
+SELECT '📋 ТАБЛИЦІ В БД:' as info;
+SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename;
+
+-- Перевірка основних таблиць OLX
+SELECT '🔍 ПЕРЕВІРКА ОСНОВНИХ ТАБЛИЦЬ:' as info;
+
+SELECT 
+  CASE WHEN EXISTS(SELECT 1 FROM pg_tables WHERE tablename = 'profiles') 
+    THEN '✅ profiles (користувачі)' 
+    ELSE '❌ profiles відсутня' END as "Користувачі";
+
+SELECT 
+  CASE WHEN EXISTS(SELECT 1 FROM pg_tables WHERE tablename = 'listings') 
+    THEN '✅ listings (оголошення)' 
+    ELSE '❌ listings відсутня' END as "Оголошення";
+
+SELECT 
+  CASE WHEN EXISTS(SELECT 1 FROM pg_tables WHERE tablename = 'categories') 
+    THEN '✅ categories (категорії)' 
+    ELSE '❌ categories відсутня' END as "Категорії";`,
+
+    '20250128_create_schema_views.sql': `-- МІГРАЦІЯ: Створення view для аналізу схеми
+-- Ця міграція створює зручні view та функції для аналізу БД
+
+-- 1. View загального огляду таблиць
+CREATE OR REPLACE VIEW v_schema_overview AS
+SELECT 
+  table_name as таблиця,
+  (SELECT count(*) FROM information_schema.columns WHERE table_name = t.table_name) as колонок
+FROM information_schema.tables t
+WHERE t.table_schema = 'public' AND t.table_type = 'BASE TABLE'
+ORDER BY table_name;
+
+-- 2. Функція опису таблиці
+CREATE OR REPLACE FUNCTION describe_table(table_name_param TEXT)
+RETURNS TABLE (колонка TEXT, тип TEXT, nullable TEXT, за_замовчуванням TEXT)
+LANGUAGE plpgsql AS $$
+BEGIN
+  RETURN QUERY
+  SELECT c.column_name, c.data_type, c.is_nullable, c.column_default
+  FROM information_schema.columns c
+  WHERE c.table_schema = 'public' AND c.table_name = table_name_param
+  ORDER BY c.ordinal_position;
+END; $$;
+
+SELECT 'Schema views створено успішно!' as result;`,
+
+    '20250128_improve_performance.sql': `-- МІГРАЦІЯ: Покращення продуктивності
+-- Додає індекси та оптимізації
+
+-- Індекси для listings (якщо існує)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE tablename = 'listings') THEN
+    CREATE INDEX IF NOT EXISTS idx_listings_status_created ON listings (status, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_listings_category ON listings (category_id, status);
+    RAISE NOTICE 'Індекси для listings створено';
+  END IF;
+END $$;
+
+-- Індекси для profiles (якщо існує)  
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE tablename = 'profiles') THEN
+    CREATE INDEX IF NOT EXISTS idx_profiles_email ON profiles (email);
+    RAISE NOTICE 'Індекси для profiles створено';
+  END IF;
+END $$;
+
+-- Розширення для текстового пошуку
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+SELECT 'Міграція продуктивності завершена!' as result;`
   };
 
   return contents[fileName] || `-- SQL file: ${fileName}
