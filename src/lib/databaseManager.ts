@@ -48,18 +48,19 @@ export const databaseManager = {
   // Отримання списку всіх таблиць
   async getAllTables(): Promise<TableInfo[]> {
     try {
-      // Спочатку пробуємо RPC функцію
+      // Спочатку пробуємо спрощену RPC функцію
       const { data, error } = await supabase
-        .rpc('get_all_tables');
+        .rpc('get_simple_tables');
 
       if (error) {
-        console.warn('RPC get_all_tables недоступна, використовуємо fallback:', error.message);
+        console.warn('RPC get_simple_tables недоступна, використовуємо fallback:', error.message);
         
-        // Fallback: прямий запит до pg_tables
+        // Fallback: використовуємо information_schema замість pg_tables
         const { data: fallbackData, error: fallbackError } = await supabase
-          .from('pg_tables')
-          .select('tablename')
-          .eq('schemaname', 'public');
+          .from('information_schema.tables')
+          .select('table_name')
+          .eq('table_schema', 'public')
+          .eq('table_type', 'BASE TABLE');
 
         if (fallbackError) {
           console.error('Fallback також не працює:', fallbackError);
@@ -68,7 +69,7 @@ export const databaseManager = {
 
         // Перетворюємо fallback дані в потрібний формат
         return (fallbackData || []).map(table => ({
-          table_name: table.tablename,
+          table_name: table.table_name,
           row_count: 0,
           table_size: 'Невідомо',
           description: 'Базова інформація (RPC недоступна)'
@@ -92,7 +93,7 @@ export const databaseManager = {
   async getTableStructure(tableName: string): Promise<ColumnInfo[]> {
     try {
       const { data, error } = await supabase
-        .rpc('get_table_structure', { table_name_param: tableName });
+        .rpc('get_simple_structure', { table_name_param: tableName });
 
       if (error) {
         console.error('Помилка отримання структури таблиці:', error);
@@ -117,13 +118,10 @@ export const databaseManager = {
   ): Promise<TableData> {
     try {
       const { data, error } = await supabase
-        .rpc('get_table_data', {
+        .rpc('get_simple_data', {
           table_name_param: tableName,
           page_number: page,
-          page_size: pageSize,
-          search_query: searchQuery,
-          order_column: orderColumn,
-          order_direction: orderDirection
+          page_size: pageSize
         });
 
       if (error) {
