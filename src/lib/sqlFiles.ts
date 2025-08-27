@@ -66,6 +66,13 @@ export async function loadSQLFiles(): Promise<SQLFile[]> {
         size: 6144,
         lastModified: new Date().toISOString(),
         status: 'idle'
+      },
+      {
+        name: '20250128_create_db_analysis_functions.sql',
+        content: await getFileContent('20250128_create_db_analysis_functions.sql'),
+        size: 12288,
+        lastModified: new Date().toISOString(),
+        status: 'idle'
       }
     ];
 
@@ -275,7 +282,62 @@ END $$;
 -- Розширення для текстового пошуку
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
-SELECT 'Міграція продуктивності завершена!' as result;`
+SELECT 'Міграція продуктивності завершена!' as result;`,
+
+    '20250128_create_db_analysis_functions.sql': `-- МІГРАЦІЯ: RPC функції для аналізу БД
+-- Створює безпечні функції для автоматичного аналізу структури БД
+
+-- 1. Функція списку таблиць
+CREATE OR REPLACE FUNCTION public.get_tables_info()
+RETURNS TABLE (table_name TEXT, column_count BIGINT, has_primary_key BOOLEAN, estimated_rows BIGINT)
+LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  RETURN QUERY
+  SELECT t.tablename::TEXT, 
+    (SELECT count(*) FROM information_schema.columns c WHERE c.table_name = t.tablename)::BIGINT,
+    EXISTS(SELECT 1 FROM information_schema.table_constraints tc WHERE tc.table_name = t.tablename AND tc.constraint_type = 'PRIMARY KEY'),
+    COALESCE(s.n_live_tup, 0)::BIGINT
+  FROM pg_tables t
+  LEFT JOIN pg_stat_user_tables s ON t.tablename = s.relname
+  WHERE t.schemaname = 'public' ORDER BY t.tablename;
+END; $$;
+
+-- 2. Функція колонок таблиці
+CREATE OR REPLACE FUNCTION public.get_table_columns(table_name_param TEXT)
+RETURNS TABLE (column_name TEXT, data_type TEXT, is_nullable BOOLEAN, column_default TEXT, is_primary_key BOOLEAN)
+LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  RETURN QUERY
+  SELECT c.column_name::TEXT, c.data_type::TEXT,
+    CASE WHEN c.is_nullable = 'YES' THEN TRUE ELSE FALSE END,
+    c.column_default::TEXT,
+    EXISTS(SELECT 1 FROM information_schema.table_constraints tc
+      JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
+      WHERE tc.table_name = table_name_param AND tc.constraint_type = 'PRIMARY KEY' AND kcu.column_name = c.column_name)
+  FROM information_schema.columns c
+  WHERE c.table_schema = 'public' AND c.table_name = table_name_param
+  ORDER BY c.ordinal_position;
+END; $$;
+
+-- 3. Функція повного аналізу
+CREATE OR REPLACE FUNCTION public.analyze_database_schema()
+RETURNS JSON LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE result JSON;
+BEGIN
+  SELECT json_build_object(
+    'tables', (SELECT json_agg(row_to_json(t)) FROM public.get_tables_info() t),
+    'analyzed_at', now(),
+    'total_tables', (SELECT count(*) FROM public.get_tables_info())
+  ) INTO result;
+  RETURN result;
+END; $$;
+
+-- Права доступу
+GRANT EXECUTE ON FUNCTION public.get_tables_info() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_table_columns(TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.analyze_database_schema() TO authenticated;
+
+SELECT 'RPC функції створено!' as result;`
   };
 
   return contents[fileName] || `-- SQL file: ${fileName}

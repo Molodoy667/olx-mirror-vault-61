@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { AdminHeader } from '@/components/admin/AdminHeader';
 import { SQLFileManager } from '@/components/admin/SQLFileManager';
+import { DatabaseAnalyzer } from '@/components/admin/DatabaseAnalyzer';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -790,6 +791,18 @@ export default function SQLManager() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Database Analyzer */}
+            <DatabaseAnalyzer
+              onMigrationGenerated={(migration) => {
+                // Додаємо згенеровану міграцію до SQL запитів
+                setSqlQuery(migration);
+                toast({
+                  title: 'Міграція згенерована',
+                  description: 'Міграцію додано до поля SQL запиту. Перевірте та виконайте її.',
+                });
+              }}
+            />
 
             {/* SQL File Manager */}
             <SQLFileManager 
