@@ -1,0 +1,7 @@
+FORCE_UPDATE_TIMESTAMP=1756299269416
+COMMIT_HASH=3b20c50
+REASON=Fix SPA routing and sync Git commits
+
+This file forces Vercel to recognize new commits and deploy latest version.
+Current issue: Vercel stuck on old commit 6b0cd24
+Target commit: 3b20c50 with SPA routing fixes
