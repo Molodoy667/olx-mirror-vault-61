@@ -60,10 +60,6 @@ export default function AdminDashboard() {
     </div>;
   }
 
-  if (!isAdmin) {
-    return null;
-  }
-
   return (
     <div className="min-h-screen bg-background">
       <AdminHeader />

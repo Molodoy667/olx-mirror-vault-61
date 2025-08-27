@@ -7,6 +7,7 @@ import { Suspense, lazy } from "react";
 import { ScrollToTopRouter } from "@/components/ScrollToTopRouter";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { UserBottomPanel } from "@/components/UserBottomPanel";
+import { AdminRoute } from "@/components/AdminRoute";
 
 // Lazy load all pages for better performance
 const Home = lazy(() => import("./pages/Home"));
@@ -91,19 +92,19 @@ const App = () => (
               <Route path="/listing/:id" element={<ListingDetail />} />
               
               {/* Admin Routes */}
-              <Route path="/admin" element={<AdminDashboard />} />
-              <Route path="/admin/users" element={<AdminUsers />} />
-              <Route path="/admin/listings" element={<AdminListings />} />
-              <Route path="/admin/categories" element={<AdminCategories />} />
-              <Route path="/admin/reports" element={<AdminReports />} />
-              <Route path="/admin/analytics" element={<AdminAnalytics />} />
-              <Route path="/admin/tariffs" element={<AdminTariffs />} />
-              <Route path="/admin/business-verifications" element={<AdminBusinessVerifications />} />
-              <Route path="/admin/messages" element={<AdminMessages />} />
-              <Route path="/admin/settings" element={<AdminSettings />} />
-              <Route path="/admin/moderation" element={<AdminModeration />} />
-              <Route path="/admin/sql-manager" element={<SQLManager />} />
-              <Route path="/admin/backup-manager" element={<BackupManager />} />
+              <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+              <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
+              <Route path="/admin/listings" element={<AdminRoute><AdminListings /></AdminRoute>} />
+              <Route path="/admin/categories" element={<AdminRoute><AdminCategories /></AdminRoute>} />
+              <Route path="/admin/reports" element={<AdminRoute><AdminReports /></AdminRoute>} />
+              <Route path="/admin/analytics" element={<AdminRoute><AdminAnalytics /></AdminRoute>} />
+              <Route path="/admin/tariffs" element={<AdminRoute><AdminTariffs /></AdminRoute>} />
+              <Route path="/admin/business-verifications" element={<AdminRoute><AdminBusinessVerifications /></AdminRoute>} />
+              <Route path="/admin/messages" element={<AdminRoute><AdminMessages /></AdminRoute>} />
+              <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
+              <Route path="/admin/moderation" element={<AdminRoute><AdminModeration /></AdminRoute>} />
+              <Route path="/admin/sql-manager" element={<AdminRoute><SQLManager /></AdminRoute>} />
+              <Route path="/admin/backup-manager" element={<AdminRoute><BackupManager /></AdminRoute>} />
               
               {/* SEO-friendly listing routes - must be after all specific routes */}
               <Route path="/:slug" element={<ListingDetail />} />

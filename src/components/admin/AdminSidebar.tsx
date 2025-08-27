@@ -11,7 +11,8 @@ import {
   DollarSign,
   Building,
   Database,
-  Archive
+  Archive,
+  CheckCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -52,9 +53,14 @@ const menuItems = [
     href: "/admin/messages"
   },
   {
-    title: "Фінанси",
+    title: "Тарифи",
     icon: DollarSign,
-    href: "/admin/finance"
+    href: "/admin/tariffs"
+  },
+  {
+    title: "Бізнес-верифікація",
+    icon: CheckCircle,
+    href: "/admin/business-verifications"
   },
   {
     title: "Звіти",
