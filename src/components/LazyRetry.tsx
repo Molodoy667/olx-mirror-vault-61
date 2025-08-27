@@ -1,7 +1,7 @@
 import { lazy, ComponentType } from 'react';
 
 // Функция для retry lazy loading с обработкой ошибок
-export function lazyWithRetry<T extends ComponentType<any>>(
+export function lazyWithRetry<T extends ComponentType<Record<string, unknown>>>(
   importFn: () => Promise<{ default: T }>,
   retries = 3
 ): React.LazyExoticComponent<T> {

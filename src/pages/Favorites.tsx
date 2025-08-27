@@ -11,14 +11,11 @@ export default function Favorites() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  if (!user) {
-    navigate('/auth');
-    return null;
-  }
-
   const { data: favorites, isLoading } = useQuery({
-    queryKey: ['user-favorites', user.id],
+    queryKey: ['user-favorites', user?.id || ''],
     queryFn: async () => {
+      if (!user) return [];
+      
       const { data, error } = await supabase
         .from('favorites')
         .select(`
@@ -40,7 +37,13 @@ export default function Favorites() {
       if (error) throw error;
       return data?.filter(fav => fav.listings?.status === 'active');
     },
+    enabled: !!user, // Только запускаем если есть пользователь
   });
+
+  if (!user) {
+    navigate('/auth');
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-background">

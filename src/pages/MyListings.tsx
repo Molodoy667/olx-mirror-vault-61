@@ -17,14 +17,11 @@ export default function MyListings() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('active');
 
-  if (!user) {
-    navigate('/auth');
-    return null;
-  }
-
   const { data: listings, isLoading } = useQuery({
-    queryKey: ['my-listings', user.id, activeTab],
+    queryKey: ['my-listings', user?.id || '', activeTab],
     queryFn: async () => {
+      if (!user) return [];
+      
       const { data, error } = await supabase
         .from('listings')
         .select('*')
@@ -35,6 +32,7 @@ export default function MyListings() {
       if (error) throw error;
       return data;
     },
+    enabled: !!user,
   });
 
   const toggleStatusMutation = useMutation({
@@ -72,6 +70,11 @@ export default function MyListings() {
       });
     },
   });
+
+  if (!user) {
+    navigate('/auth');
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-background">
