@@ -52,8 +52,8 @@ export function SQLFileManager({ onFileExecute }: SQLFileManagerProps) {
     } catch (error) {
       console.error('Error loading SQL files:', error);
       toast({
-        title: 'Ошибка',
-        description: 'Не удалось загрузить список SQL файлов',
+        title: 'Помилка',
+        description: 'Не вдалося завантажити список SQL файлів',
         variant: 'destructive'
       });
     } finally {
@@ -106,8 +106,8 @@ export function SQLFileManager({ onFileExecute }: SQLFileManagerProps) {
       ));
 
       toast({
-        title: 'Успех!',
-        description: `SQL файл "${fileName}" выполнен успешно`,
+        title: 'Успіх!',
+        description: `SQL файл "${fileName}" виконано успішно`,
       });
 
       onFileExecute?.(fileName, result);
@@ -128,8 +128,8 @@ export function SQLFileManager({ onFileExecute }: SQLFileManagerProps) {
       ));
 
       toast({
-        title: 'Ошибка выполнения',
-        description: `Ошибка в файле "${fileName}": ${error.message}`,
+        title: 'Помилка виконання',
+        description: `Помилка у файлі "${fileName}": ${error.message}`,
         variant: 'destructive'
       });
     }
@@ -142,13 +142,13 @@ export function SQLFileManager({ onFileExecute }: SQLFileManagerProps) {
       setFiles(prev => prev.filter(f => f.name !== fileName));
       
       toast({
-        title: 'Файл удален',
-        description: `SQL файл "${fileName}" удален успешно`,
+        title: 'Файл видалено',
+        description: `SQL файл "${fileName}" видалено успішно`,
       });
     } catch (error: any) {
       toast({
-        title: 'Ошибка удаления',
-        description: `Не удалось удалить файл: ${error.message}`,
+        title: 'Помилка видалення',
+        description: `Не вдалося видалити файл: ${error.message}`,
         variant: 'destructive'
       });
     }
@@ -174,13 +174,13 @@ export function SQLFileManager({ onFileExecute }: SQLFileManagerProps) {
   const getStatusBadge = (file: SQLFile) => {
     switch (file.status) {
       case 'running':
-        return <Badge variant="secondary">Выполняется...</Badge>;
+        return <Badge variant="secondary">Виконується...</Badge>;
       case 'success':
-        return <Badge variant="default" className="bg-green-500">Успешно</Badge>;
+        return <Badge variant="default" className="bg-green-500">Успішно</Badge>;
       case 'error':
-        return <Badge variant="destructive">Ошибка</Badge>;
+        return <Badge variant="destructive">Помилка</Badge>;
       default:
-        return <Badge variant="outline">Готов</Badge>;
+        return <Badge variant="outline">Готовий</Badge>;
     }
   };
 
@@ -200,8 +200,8 @@ export function SQLFileManager({ onFileExecute }: SQLFileManagerProps) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>SQL Файлы</CardTitle>
-          <CardDescription>Загрузка...</CardDescription>
+          <CardTitle>SQL Файли</CardTitle>
+          <CardDescription>Завантаження...</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center h-32">
@@ -217,54 +217,56 @@ export function SQLFileManager({ onFileExecute }: SQLFileManagerProps) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <FileText className="h-5 w-5" />
-          SQL Файлы
+          SQL Файли
         </CardTitle>
         <CardDescription>
-          Управление и выполнение SQL файлов из папки /sql
+          Управління та виконання SQL файлів з папки /sql
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {/* Кнопки действий */}
-          <div className="flex gap-2">
+          {/* Кнопки дій */}
+          <div className="flex flex-col sm:flex-row gap-2">
             <Button 
               onClick={loadFiles}
               variant="outline"
               size="sm"
+              className="w-full sm:w-auto"
             >
               <Download className="h-4 w-4 mr-2" />
-              Обновить список
+              Оновити список
             </Button>
             <Button 
               variant="outline"
               size="sm"
+              className="w-full sm:w-auto"
               onClick={() => {
-                // В реальности здесь бы был file input для загрузки
+                // В реальності тут був би file input для завантаження
                 toast({
-                  title: 'Загрузка файлов',
-                  description: 'Поместите .sql файлы в папку /sql для их отображения здесь',
+                  title: 'Завантаження файлів',
+                  description: 'Помістіть .sql файли в папку /sql для їх відображення тут',
                 });
               }}
             >
               <Upload className="h-4 w-4 mr-2" />
-              Загрузить файл
+              Завантажити файл
             </Button>
           </div>
 
-          {/* Список файлов */}
+          {/* Список файлів */}
           {files.length === 0 ? (
             <Alert>
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                SQL файлы не найдены. Поместите .sql файлы в папку /sql
+                SQL файли не знайдені. Помістіть .sql файли в папку /sql
               </AlertDescription>
             </Alert>
           ) : (
             <div className="space-y-3">
               {files.map((file) => (
                 <Card key={file.name} className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
                       {getStatusIcon(file.status)}
                       <div>
                         <div className="flex items-center gap-2">
@@ -275,87 +277,92 @@ export function SQLFileManager({ onFileExecute }: SQLFileManagerProps) {
                           {formatFileSize(file.size)} • {formatDate(file.lastModified)}
                         </div>
                         {file.executionTime && (
-                          <div className="text-sm text-green-600">
-                            Выполнено за {file.executionTime}мс
+                          <div className="text-sm text-green-600 dark:text-green-400">
+                            Виконано за {file.executionTime}мс
                           </div>
                         )}
                         {file.error && (
-                          <div className="text-sm text-red-600">
-                            Ошибка: {file.error}
+                          <div className="text-sm text-red-600 dark:text-red-400">
+                            Помилка: {file.error}
                           </div>
                         )}
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      {/* Просмотр содержимого */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      {/* Перегляд вмісту */}
                       <Dialog>
                         <DialogTrigger asChild>
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => setSelectedFile(file)}
+                            className="flex-shrink-0"
                           >
-                            <Eye className="h-4 w-4" />
+                            <Eye className="h-4 w-4 lg:mr-1" />
+                            <span className="hidden lg:inline">Переглянути</span>
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="max-w-4xl max-h-[80vh]">
+                        <DialogContent className="max-w-[95vw] lg:max-w-4xl max-h-[90vh] lg:max-h-[80vh]">
                           <DialogHeader>
-                            <DialogTitle>{file.name}</DialogTitle>
+                            <DialogTitle className="text-base lg:text-lg break-all">{file.name}</DialogTitle>
                             <DialogDescription>
-                              Содержимое SQL файла
+                              Вміст SQL файлу
                             </DialogDescription>
                           </DialogHeader>
-                          <ScrollArea className="h-[60vh] w-full">
-                            <pre className="text-sm bg-muted p-4 rounded-md overflow-auto">
+                          <ScrollArea className="h-[60vh] lg:h-[60vh] w-full">
+                            <pre className="text-xs lg:text-sm bg-muted dark:bg-muted p-4 rounded-md overflow-auto">
                               <code>{file.content}</code>
                             </pre>
                           </ScrollArea>
                         </DialogContent>
                       </Dialog>
 
-                      {/* Выполнить */}
+                      {/* Виконати */}
                       <Button
                         onClick={() => executeFile(file)}
                         disabled={file.status === 'running'}
                         size="sm"
                         variant="default"
+                        className="flex-shrink-0"
                       >
-                        <Play className="h-4 w-4 mr-1" />
-                        Выполнить
+                        <Play className="h-4 w-4 lg:mr-1" />
+                        <span className="hidden lg:inline">Виконати</span>
                       </Button>
 
-                      {/* Удалить */}
+                      {/* Видалити */}
                       <Button
                         onClick={() => deleteFile(file.name)}
                         disabled={file.status === 'running'}
                         size="sm"
                         variant="destructive"
+                        className="flex-shrink-0"
                       >
                         <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Видалити</span>
                       </Button>
                     </div>
                   </div>
 
-                  {/* Прогресс выполнения */}
+                  {/* Прогрес виконання */}
                   {file.status === 'running' && executionProgress[file.name] !== undefined && (
                     <div className="mt-3">
                       <Progress value={executionProgress[file.name]} className="h-2" />
                       <div className="text-sm text-muted-foreground mt-1">
-                        Выполнение: {executionProgress[file.name]}%
+                        Виконання: {executionProgress[file.name]}%
                       </div>
                     </div>
                   )}
 
-                  {/* Результат выполнения */}
+                  {/* Результат виконання */}
                   {file.result && file.status === 'success' && (
-                    <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-md">
-                      <div className="text-sm text-green-800">
+                    <div className="mt-3 p-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-md">
+                      <div className="text-sm text-green-800 dark:text-green-200">
                         <strong>Результат:</strong> {file.result.message}
                       </div>
                       {file.result.rowsAffected !== undefined && (
-                        <div className="text-sm text-green-700">
-                          Затронуто строк: {file.result.rowsAffected}
+                        <div className="text-sm text-green-700 dark:text-green-300">
+                          Зачеплено рядків: {file.result.rowsAffected}
                         </div>
                       )}
                     </div>

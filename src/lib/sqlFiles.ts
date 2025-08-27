@@ -166,7 +166,7 @@ export async function executeSQLFile(fileName: string, content: string): Promise
   if (content.includes('SELECT')) {
     return {
       success: true,
-      message: 'SELECT запрос выполнен успешно',
+      message: 'SELECT запит виконано успішно',
       rowsAffected: Math.floor(Math.random() * 100) + 1,
       executionTime,
       data: {
@@ -177,7 +177,7 @@ export async function executeSQLFile(fileName: string, content: string): Promise
   } else if (content.includes('CREATE')) {
     return {
       success: true, 
-      message: 'Объекты базы данных созданы успешно',
+      message: "Об'єкти бази даних створено успішно",
       rowsAffected: 0,
       executionTime,
       data: {
@@ -187,19 +187,19 @@ export async function executeSQLFile(fileName: string, content: string): Promise
   } else if (content.includes('UPDATE') || content.includes('INSERT')) {
     return {
       success: true,
-      message: 'Данные обновлены успешно', 
+      message: 'Дані оновлено успішно', 
       rowsAffected: Math.floor(Math.random() * 500) + 10,
       executionTime
     };
   } else {
-    // Случайно симулируем ошибку
+    // Випадково імітуємо помилку
     if (Math.random() < 0.1) {
-      throw new Error('Синтаксическая ошибка в SQL запросе');
+      throw new Error('Синтаксична помилка в SQL запиті');
     }
     
     return {
       success: true,
-      message: 'SQL файл выполнен успешно',
+      message: 'SQL файл виконано успішно',
       rowsAffected: Math.floor(Math.random() * 10),
       executionTime
     };
@@ -212,6 +212,6 @@ export async function deleteSQLFile(fileName: string): Promise<void> {
   await new Promise(resolve => setTimeout(resolve, 500));
   
   if (Math.random() < 0.05) {
-    throw new Error('Не удалось удалить файл: файл используется другим процессом');
+    throw new Error('Не вдалося видалити файл: файл використовується іншим процесом');
   }
 }

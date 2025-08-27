@@ -1,7 +1,7 @@
--- Example Analytics Query
--- Анализ активности пользователей и объявлений
+-- Приклад Аналітичного Запиту
+-- Аналіз активності користувачів та оголошень
 
--- 1. Статистика пользователей по месяцам
+-- 1. Статистика користувачів по місяцях
 SELECT 
   DATE_TRUNC('month', created_at) as month,
   COUNT(*) as users_count,
@@ -11,7 +11,7 @@ WHERE created_at >= NOW() - INTERVAL '6 months'
 GROUP BY month 
 ORDER BY month DESC;
 
--- 2. Топ категории по количеству объявлений
+-- 2. Топ категорії за кількістю оголошень
 SELECT 
   c.name as category_name,
   COUNT(l.*) as listings_count,
@@ -23,17 +23,17 @@ GROUP BY c.id, c.name
 ORDER BY listings_count DESC
 LIMIT 10;
 
--- 3. Активность по дням недели
+-- 3. Активність по днях тижня
 SELECT 
   EXTRACT(DOW FROM created_at) as day_of_week,
   CASE 
-    WHEN EXTRACT(DOW FROM created_at) = 0 THEN 'Воскресенье'
-    WHEN EXTRACT(DOW FROM created_at) = 1 THEN 'Понедельник'
-    WHEN EXTRACT(DOW FROM created_at) = 2 THEN 'Вторник'
-    WHEN EXTRACT(DOW FROM created_at) = 3 THEN 'Среда'
-    WHEN EXTRACT(DOW FROM created_at) = 4 THEN 'Четверг'
-    WHEN EXTRACT(DOW FROM created_at) = 5 THEN 'Пятница'
-    WHEN EXTRACT(DOW FROM created_at) = 6 THEN 'Суббота'
+    WHEN EXTRACT(DOW FROM created_at) = 0 THEN 'Неділя'
+    WHEN EXTRACT(DOW FROM created_at) = 1 THEN 'Понеділок'
+    WHEN EXTRACT(DOW FROM created_at) = 2 THEN 'Вівторок'
+    WHEN EXTRACT(DOW FROM created_at) = 3 THEN 'Середа'
+    WHEN EXTRACT(DOW FROM created_at) = 4 THEN 'Четвер'
+    WHEN EXTRACT(DOW FROM created_at) = 5 THEN "П'ятниця"
+    WHEN EXTRACT(DOW FROM created_at) = 6 THEN 'Субота'
   END as day_name,
   COUNT(*) as listings_count
 FROM listings
@@ -41,7 +41,7 @@ WHERE created_at >= NOW() - INTERVAL '30 days'
 GROUP BY day_of_week, day_name
 ORDER BY day_of_week;
 
--- 4. Пользователи с наибольшим количеством объявлений
+-- 4. Користувачі з найбільшою кількістю оголошень
 SELECT 
   p.id,
   p.email,
