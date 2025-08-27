@@ -132,6 +132,20 @@ export async function loadSQLFiles(): Promise<SQLFile[]> {
         size: 8192,
         lastModified: new Date().toISOString(),
         status: 'idle'
+      },
+      {
+        name: '20250828_bulk_create_seo_urls.sql',
+        content: await getFileContent('20250828_bulk_create_seo_urls.sql'),
+        size: 16384,
+        lastModified: new Date().toISOString(),
+        status: 'idle'
+      },
+      {
+        name: 'create_seo_urls_table.sql',
+        content: await getFileContent('create_seo_urls_table.sql'),
+        size: 4096,
+        lastModified: new Date().toISOString(),
+        status: 'idle'
       }
     ];
 
@@ -907,7 +921,242 @@ GRANT EXECUTE ON FUNCTION public.get_all_functions() TO authenticated;
 -- 4. ТЕСТУВАННЯ
 SELECT '🎉 ВСЕ СТВОРЕНО УСПІШНО!' as status;
 SELECT 'Кількість таблиць: ' || COUNT(*)::TEXT as tables_count FROM public.get_simple_tables();
-SELECT '✅ ГОТОВО! Перейдіть в Database Manager - таблиці мають з''явитися!' as final_result;`
+SELECT '✅ ГОТОВО! Перейдіть в Database Manager - таблиці мають з''явитися!' as final_result;`,
+    
+    '20250828_bulk_create_seo_urls.sql': `-- Bulk create SEO URLs for existing listings that don't have them
+-- Масове створення SEO URLs для існуючих оголошень
+
+-- Function to create SEO URLs for all listings without them
+CREATE OR REPLACE FUNCTION bulk_create_seo_urls()
+RETURNS TABLE(
+  listing_id UUID,
+  title TEXT,
+  seo_url TEXT,
+  status TEXT
+) AS $$
+DECLARE
+  listing_record RECORD;
+  slug_text TEXT;
+  seo_id_text TEXT;
+  full_url_text TEXT;
+  chars TEXT := 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  i INTEGER;
+BEGIN
+  -- Loop through all listings without SEO URLs
+  FOR listing_record IN 
+    SELECT l.id, l.title
+    FROM listings l
+    LEFT JOIN seo_urls s ON l.id = s.listing_id
+    WHERE s.listing_id IS NULL
+      AND l.status = 'active'
+  LOOP
+    -- Generate slug from title (transliteration and cleanup)
+    slug_text := lower(trim(listing_record.title));
+    
+    -- Basic transliteration (Ukrainian to Latin)
+    slug_text := replace(slug_text, 'а', 'a');
+    slug_text := replace(slug_text, 'б', 'b');
+    slug_text := replace(slug_text, 'в', 'v');
+    slug_text := replace(slug_text, 'г', 'h');
+    slug_text := replace(slug_text, 'ґ', 'g');
+    slug_text := replace(slug_text, 'д', 'd');
+    slug_text := replace(slug_text, 'е', 'e');
+    slug_text := replace(slug_text, 'є', 'ye');
+    slug_text := replace(slug_text, 'ж', 'zh');
+    slug_text := replace(slug_text, 'з', 'z');
+    slug_text := replace(slug_text, 'и', 'y');
+    slug_text := replace(slug_text, 'і', 'i');
+    slug_text := replace(slug_text, 'ї', 'yi');
+    slug_text := replace(slug_text, 'й', 'y');
+    slug_text := replace(slug_text, 'к', 'k');
+    slug_text := replace(slug_text, 'л', 'l');
+    slug_text := replace(slug_text, 'м', 'm');
+    slug_text := replace(slug_text, 'н', 'n');
+    slug_text := replace(slug_text, 'о', 'o');
+    slug_text := replace(slug_text, 'п', 'p');
+    slug_text := replace(slug_text, 'р', 'r');
+    slug_text := replace(slug_text, 'с', 's');
+    slug_text := replace(slug_text, 'т', 't');
+    slug_text := replace(slug_text, 'у', 'u');
+    slug_text := replace(slug_text, 'ф', 'f');
+    slug_text := replace(slug_text, 'х', 'kh');
+    slug_text := replace(slug_text, 'ц', 'ts');
+    slug_text := replace(slug_text, 'ч', 'ch');
+    slug_text := replace(slug_text, 'ш', 'sh');
+    slug_text := replace(slug_text, 'щ', 'shch');
+    slug_text := replace(slug_text, 'ь', '');
+    slug_text := replace(slug_text, 'ю', 'yu');
+    slug_text := replace(slug_text, 'я', 'ya');
+    
+    -- Clean up slug
+    slug_text := regexp_replace(slug_text, '[^a-z0-9\\s-]', '', 'g');
+    slug_text := regexp_replace(slug_text, '\\s+', '-', 'g');
+    slug_text := regexp_replace(slug_text, '-+', '-', 'g');
+    slug_text := trim(both '-' from slug_text);
+    slug_text := substring(slug_text from 1 for 60);
+    
+    -- Generate random 6-character ID
+    seo_id_text := '';
+    FOR i IN 1..6 LOOP
+      seo_id_text := seo_id_text || substring(chars from (floor(random() * length(chars)) + 1) for 1);
+    END LOOP;
+    
+    -- Construct full URL
+    full_url_text := '/' || slug_text || '-' || seo_id_text;
+    
+    -- Insert SEO URL
+    BEGIN
+      INSERT INTO seo_urls (listing_id, slug, seo_id, full_url)
+      VALUES (listing_record.id, slug_text, seo_id_text, full_url_text);
+      
+      -- Return success record
+      listing_id := listing_record.id;
+      title := listing_record.title;
+      seo_url := full_url_text;
+      status := 'created';
+      RETURN NEXT;
+      
+    EXCEPTION WHEN OTHERS THEN
+      -- Return error record
+      listing_id := listing_record.id;
+      title := listing_record.title;
+      seo_url := '';
+      status := 'error: ' || SQLERRM;
+      RETURN NEXT;
+    END;
+  END LOOP;
+  
+  RETURN;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Grant execute permission
+GRANT EXECUTE ON FUNCTION bulk_create_seo_urls() TO authenticated;
+
+-- Run the function to create SEO URLs for existing listings
+-- Uncomment the line below to execute immediately:
+-- SELECT * FROM bulk_create_seo_urls();
+
+-- Check results
+SELECT 
+  'Total listings' as metric,
+  COUNT(*) as count
+FROM listings 
+WHERE status = 'active'
+UNION ALL
+SELECT 
+  'Listings with SEO URLs' as metric,
+  COUNT(*) as count
+FROM listings l
+JOIN seo_urls s ON l.id = s.listing_id
+WHERE l.status = 'active'
+UNION ALL
+SELECT 
+  'Listings without SEO URLs' as metric,
+  COUNT(*) as count
+FROM listings l
+LEFT JOIN seo_urls s ON l.id = s.listing_id
+WHERE l.status = 'active' AND s.listing_id IS NULL;
+
+-- Sample of created SEO URLs
+SELECT 
+  l.title,
+  s.full_url,
+  s.created_at
+FROM listings l
+JOIN seo_urls s ON l.id = s.listing_id
+ORDER BY s.created_at DESC
+LIMIT 10;`,
+    
+    'create_seo_urls_table.sql': `-- 🔗 СТВОРЕННЯ ТАБЛИЦІ SEO_URLS
+-- Швидке створення таблиці для SEO URLs системи
+
+-- 1. Створення таблиці seo_urls
+CREATE TABLE IF NOT EXISTS seo_urls (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  listing_id UUID NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+  slug VARCHAR(100) NOT NULL,
+  seo_id VARCHAR(6) NOT NULL,
+  full_url VARCHAR(200) NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(listing_id),
+  UNIQUE(full_url)
+);
+
+-- 2. Створення індексів для швидкого пошуку
+CREATE INDEX IF NOT EXISTS idx_seo_urls_listing_id ON seo_urls(listing_id);
+CREATE INDEX IF NOT EXISTS idx_seo_urls_full_url ON seo_urls(full_url);
+CREATE INDEX IF NOT EXISTS idx_seo_urls_slug ON seo_urls(slug);
+
+-- 3. Включення Row Level Security (RLS)
+ALTER TABLE seo_urls ENABLE ROW LEVEL SECURITY;
+
+-- 4. Створення політик безпеки
+CREATE POLICY "Allow public read access to seo_urls" ON seo_urls
+  FOR SELECT USING (true);
+
+CREATE POLICY "Allow listing owner to create seo_urls" ON seo_urls
+  FOR INSERT WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM listings 
+      WHERE id = listing_id 
+      AND user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Allow listing owner to update seo_urls" ON seo_urls
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM listings 
+      WHERE id = listing_id 
+      AND user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Allow listing owner to delete seo_urls" ON seo_urls
+  FOR DELETE USING (
+    EXISTS (
+      SELECT 1 FROM listings 
+      WHERE id = listing_id 
+      AND user_id = auth.uid()
+    )
+  );
+
+-- 5. Тригер для оновлення updated_at
+CREATE OR REPLACE FUNCTION update_seo_urls_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_seo_urls_updated_at
+  BEFORE UPDATE ON seo_urls
+  FOR EACH ROW
+  EXECUTE FUNCTION update_seo_urls_updated_at();
+
+-- 6. Перевірка створення
+SELECT 'Таблиця seo_urls створена успішно! ✅' as status;
+
+-- 7. Інформація про таблицю
+SELECT 
+  column_name,
+  data_type,
+  is_nullable
+FROM information_schema.columns 
+WHERE table_name = 'seo_urls' 
+ORDER BY ordinal_position;
+
+-- 8. Перевірка індексів
+SELECT 
+  indexname,
+  indexdef
+FROM pg_indexes 
+WHERE tablename = 'seo_urls';
+
+-- ✅ ГОТОВО! Тепер можна використовувати SEO URLs систему.`
   };
 
   return contents[fileName] || `-- SQL file: ${fileName}

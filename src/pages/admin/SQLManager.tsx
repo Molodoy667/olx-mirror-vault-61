@@ -300,10 +300,10 @@ export default function SQLManager() {
       });
 
       if (error) {
-        // Якщо функція не існує, показуємо помилку
+        // Якщо є помилка, це завжди failure
         const result: SQLResult = {
           success: false,
-          message: "Функція exec_sql не знайдена. Створіть її в Supabase Dashboard.",
+          message: "Помилка виконання SQL",
           error: error.message,
           executionTime: Date.now() - startTime
         };
@@ -311,14 +311,29 @@ export default function SQLManager() {
         setResults(prev => [result, ...prev]);
         
         toast({
-          title: "Помилка",
-          description: "Функція exec_sql не створена. Використовуйте експорт таблиць.",
+          title: "Помилка виконання SQL",
+          description: error.message,
           variant: "destructive",
         });
       } else {
+        // Перевіряємо чи є дані у відповіді або це просто успішне виконання
+        let resultMessage = "SQL виконано успішно";
+        let affectedRows = 0;
+        
+        if (data && typeof data === 'object') {
+          if (Array.isArray(data)) {
+            affectedRows = data.length;
+            resultMessage = `SQL запит виконано успішно. Повернено рядків: ${affectedRows}`;
+          } else if (data.command) {
+            // Для INSERT, UPDATE, DELETE команд
+            affectedRows = data.rowCount || 0;
+            resultMessage = `${data.command} виконано успішно. Зачеплено рядків: ${affectedRows}`;
+          }
+        }
+        
         const result: SQLResult = {
           success: true,
-          message: "SQL виконано успішно",
+          message: resultMessage,
           data,
           executionTime: Date.now() - startTime
         };
@@ -327,7 +342,7 @@ export default function SQLManager() {
         
         toast({
           title: "SQL виконано",
-          description: "Запит виконано успішно",
+          description: resultMessage,
         });
       }
 
