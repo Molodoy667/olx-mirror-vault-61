@@ -27,26 +27,19 @@ export default defineConfig(({ mode }) => ({
       plugins: [],
       output: {
         manualChunks: (id) => {
-          // Выносим большие библиотеки в отдельные чанки
+          // БЕЗОПАСНОЕ разделение - только крупные независимые библиотеки
           if (id.includes('node_modules')) {
-            // КРИТИЧНО: React должен быть в одном chunk с зависящими от него библиотеками
-            if (id.includes('react') || id.includes('react-dom') || 
-                id.includes('@radix-ui') || id.includes('react-router')) {
-              return 'vendor-react';
-            }
+            // Supabase - крупная независимая библиотека
             if (id.includes('@supabase')) {
               return 'vendor-supabase';
             }
-            if (id.includes('lucide-react')) {
-              return 'vendor-other';
-            }
+            // Recharts - крупные графики, но зависят от React!
             if (id.includes('recharts')) {
-              return 'vendor-charts';
+              return 'vendor-react'; // Перемещаем к React!
             }
-            if (id.includes('@tanstack')) {
-              return 'vendor-query';
-            }
-            return 'vendor-other';
+            // ВСЕ ОСТАЛЬНОЕ - в vendor-react для безопасности
+            // Включая React, Radix, Router, hooks, и все что может использовать React
+            return 'vendor-react';
           }
           
           // Разделяем страницы админки
