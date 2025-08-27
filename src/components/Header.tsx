@@ -6,7 +6,6 @@ import { useAdmin } from "@/hooks/useAdmin";
 import { useState } from "react";
 import { ThemeToggle } from "./ThemeToggle";
 import { NotificationBell } from "./NotificationBell";
-import { LanguageSelector } from "./LanguageSelector";
 import { TouchSidebar, TouchMenuButton } from "./TouchSidebar";
 import {
   DropdownMenu,
@@ -41,15 +40,9 @@ export function Header() {
                 <MessageCircle className="w-5 h-5" />
                 <span>Чат</span>
               </button>
-              
-              <LanguageSelector />
-              
-              <ThemeToggle />
 
               {user ? (
                 <>
-                  <NotificationBell />
-                  
                   <button 
                     onClick={() => navigate('/favorites')}
                     className="flex items-center space-x-2 text-foreground hover:text-primary transition-colors"
@@ -119,9 +112,18 @@ export function Header() {
               )}
             </nav>
 
-            {/* Touch-friendly menu button */}
-            <div className="md:hidden">
-              <TouchMenuButton onClick={() => setSidebarOpen(true)} />
+            {/* Right side controls - Theme, Notifications, Touch Menu */}
+            <div className="flex items-center space-x-3">
+              {/* Theme Toggle */}
+              <ThemeToggle />
+              
+              {/* Notifications for authenticated users */}
+              {user && <NotificationBell />}
+              
+              {/* Touch-friendly menu button */}
+              <div className="md:hidden">
+                <TouchMenuButton onClick={() => setSidebarOpen(true)} />
+              </div>
             </div>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Facebook, Instagram, Twitter, Youtube } from "lucide-react";
+import { LanguageSelector } from "./LanguageSelector";
 
 export function Footer() {
   return (
@@ -73,11 +74,16 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-border/50 mt-8 pt-8 text-center">
-          <p className="text-sm">
-            © 2024 Novado Clone. Всі права захищені. | 
-            <span className="ml-2">Цей сайт використовує cookies</span>
-          </p>
+        <div className="border-t border-border/50 mt-8 pt-8">
+          <div className="flex flex-col md:flex-row items-center justify-between">
+            <p className="text-sm mb-4 md:mb-0">
+              © 2024 Novado Clone. Всі права захищені. | 
+              <span className="ml-2">Цей сайт використовує cookies</span>
+            </p>
+            <div className="flex items-center space-x-4">
+              <LanguageSelector />
+            </div>
+          </div>
         </div>
       </div>
     </footer>

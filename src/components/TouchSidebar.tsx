@@ -20,9 +20,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
-import { ThemeToggle } from "./ThemeToggle";
-import { NotificationBell } from "./NotificationBell";
-import { LanguageSelector } from "./LanguageSelector";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -37,38 +34,57 @@ export function TouchSidebar({ isOpen, onClose, onToggle }: TouchSidebarProps) {
   const { isAdmin } = useAdmin();
   const navigate = useNavigate();
   const sidebarRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const startX = useRef<number>(0);
   const currentX = useRef<number>(0);
   const isDragging = useRef<boolean>(false);
+  const startY = useRef<number>(0);
+  const isScrolling = useRef<boolean>(false);
 
-  // Handle touch events for swipe gestures
+  // Handle touch events for swipe gestures and scrolling
   useEffect(() => {
     const sidebar = sidebarRef.current;
-    if (!sidebar) return;
+    const content = contentRef.current;
+    if (!sidebar || !content) return;
 
     const handleTouchStart = (e: TouchEvent) => {
       startX.current = e.touches[0].clientX;
+      startY.current = e.touches[0].clientY;
       isDragging.current = true;
+      isScrolling.current = false;
     };
 
     const handleTouchMove = (e: TouchEvent) => {
       if (!isDragging.current) return;
-      e.preventDefault(); // Prevent scrolling while dragging
+      
       currentX.current = e.touches[0].clientX;
       const deltaX = currentX.current - startX.current;
+      const deltaY = Math.abs(e.touches[0].clientY - startY.current);
       
-      // Allow swipe to close when open
-      if (isOpen && deltaX < -50) {
-        sidebar.style.transform = `translateX(${Math.max(deltaX, -300)}px)`;
+      // Determine if user is trying to scroll or swipe
+      if (deltaY > Math.abs(deltaX) && deltaY > 10) {
+        isScrolling.current = true;
+        isDragging.current = false;
+        return;
       }
-      // Allow swipe to open when closed
-      if (!isOpen && deltaX > 50) {
-        sidebar.style.transform = `translateX(${Math.min(deltaX - 300, 0)}px)`;
+      
+      // Prevent scrolling while swiping horizontally
+      if (Math.abs(deltaX) > 10 && !isScrolling.current) {
+        e.preventDefault();
+        
+        // Allow swipe to close when open
+        if (isOpen && deltaX < -50) {
+          sidebar.style.transform = `translateX(${Math.max(deltaX, -300)}px)`;
+        }
+        // Allow swipe to open when closed
+        if (!isOpen && deltaX > 50) {
+          sidebar.style.transform = `translateX(${Math.min(deltaX - 300, 0)}px)`;
+        }
       }
     };
 
     const handleTouchEnd = () => {
-      if (!isDragging.current) return;
+      if (!isDragging.current || isScrolling.current) return;
       isDragging.current = false;
       
       const deltaX = currentX.current - startX.current;
@@ -91,16 +107,25 @@ export function TouchSidebar({ isOpen, onClose, onToggle }: TouchSidebarProps) {
       }
     };
 
+    // Handle swipe from edge to close
+    const handleEdgeSwipeClose = (e: TouchEvent) => {
+      if (isOpen && e.touches[0].clientX > window.innerWidth - 20) {
+        handleTouchStart(e);
+      }
+    };
+
     sidebar.addEventListener('touchstart', handleTouchStart, { passive: false });
     sidebar.addEventListener('touchmove', handleTouchMove, { passive: false });
     sidebar.addEventListener('touchend', handleTouchEnd);
     document.addEventListener('touchstart', handleEdgeSwipe, { passive: false });
+    document.addEventListener('touchstart', handleEdgeSwipeClose, { passive: false });
 
     return () => {
       sidebar.removeEventListener('touchstart', handleTouchStart);
       sidebar.removeEventListener('touchmove', handleTouchMove);
       sidebar.removeEventListener('touchend', handleTouchEnd);
       document.removeEventListener('touchstart', handleEdgeSwipe);
+      document.removeEventListener('touchstart', handleEdgeSwipeClose);
     };
   }, [isOpen, onClose, onToggle]);
 
@@ -262,8 +287,11 @@ export function TouchSidebar({ isOpen, onClose, onToggle }: TouchSidebarProps) {
           </Button>
         </div>
 
-        {/* Menu Items */}
-        <div className="flex-1 py-6">
+        {/* Scrollable Menu Items */}
+        <div 
+          ref={contentRef}
+          className="flex-1 overflow-y-auto py-6 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent"
+        >
           <div className="space-y-2 px-4">
             {menuItems.map((item, index) => (
               <button
@@ -291,21 +319,22 @@ export function TouchSidebar({ isOpen, onClose, onToggle }: TouchSidebarProps) {
 
         {/* Footer */}
         <div className="p-4 border-t border-border bg-muted/30">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <ThemeToggle />
-              <LanguageSelector />
-              {user && <NotificationBell />}
+          <div className="text-center">
+            <div className="text-xs text-muted-foreground mb-2">
+              © 2024 Novado
             </div>
             <div className="text-xs text-muted-foreground">
-              © 2024 Novado
+              Свайп вліво для закриття
             </div>
           </div>
         </div>
 
-        {/* Swipe indicator */}
+        {/* Swipe indicators */}
         <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-full">
           <div className="w-1 h-16 bg-primary/30 rounded-r-lg" />
+        </div>
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full">
+          <div className="w-1 h-16 bg-primary/30 rounded-l-lg" />
         </div>
       </div>
     </>
