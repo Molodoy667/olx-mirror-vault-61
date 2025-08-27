@@ -2,9 +2,8 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
-  pull_request:
     branches: [ main ]
+  # Removed pull_request and develop branch to prevent automatic workflows
 
 jobs:
   test:
