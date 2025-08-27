@@ -171,22 +171,10 @@ export function TouchSidebar({ isOpen, onClose, onToggle }: TouchSidebarProps) {
       color: 'text-green-500'
     },
     { 
-      icon: Heart, 
-      label: 'Обрані', 
-      action: () => handleNavigation('/favorites'),
-      color: 'text-red-500'
-    },
-    { 
       icon: MessageCircle, 
       label: 'Повідомлення', 
       action: () => handleNavigation('/messages'),
       color: 'text-purple-500'
-    },
-    { 
-      icon: Search, 
-      label: 'Збережені пошуки', 
-      action: () => handleNavigation('/saved-searches'),
-      color: 'text-orange-500'
     },
     { 
       icon: Plus, 
@@ -255,20 +243,23 @@ export function TouchSidebar({ isOpen, onClose, onToggle }: TouchSidebarProps) {
       >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-border bg-gradient-to-r from-primary/10 to-primary-dark/10">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3 flex-1">
             {user ? (
               <>
-                <Avatar className="w-12 h-12 border-2 border-primary/20">
-                  <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`} />
+                <Avatar className="w-12 h-12 border-2 border-primary/20 flex-shrink-0">
+                  <AvatarImage 
+                    src={user.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`} 
+                    alt="Avatar"
+                  />
                   <AvatarFallback className="bg-primary text-primary-foreground text-lg font-semibold">
                     {user.email?.charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-                <div>
-                  <p className="font-semibold text-foreground">
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-foreground truncate">
                     {user.user_metadata?.full_name || 'Користувач'}
                   </p>
-                  <p className="text-sm text-muted-foreground">{user.email}</p>
+                  <p className="text-sm text-muted-foreground truncate">{user.email}</p>
                 </div>
               </>
             ) : (
@@ -277,11 +268,24 @@ export function TouchSidebar({ isOpen, onClose, onToggle }: TouchSidebarProps) {
               </div>
             )}
           </div>
+          
+          {/* Settings button for authenticated users */}
+          {user && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => handleNavigation('/edit-profile')}
+              className="hover:bg-primary/10 flex-shrink-0"
+            >
+              <Settings className="w-5 h-5" />
+            </Button>
+          )}
+          
           <Button 
             variant="ghost" 
             size="icon" 
             onClick={onClose}
-            className="hover:bg-primary/10"
+            className="hover:bg-primary/10 flex-shrink-0"
           >
             <X className="w-5 h-5" />
           </Button>

@@ -274,4 +274,26 @@ All colors MUST be HSL.
   .animate-toast-slide-out {
     animation: toast-slide-out 0.3s ease-out forwards;
   }
+
+  /* Safe area support for mobile devices */
+  .h-safe-area-inset-bottom {
+    height: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Bottom panel improvements */
+  @supports (padding-bottom: env(safe-area-inset-bottom)) {
+    .pb-safe {
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+  }
+
+  /* Touch-friendly button improvements */
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+
+  /* Bottom panel shadow */
+  .bottom-panel-shadow {
+    box-shadow: 0 -4px 20px -5px hsl(0 0% 0% / 0.1);
+  }
 }
