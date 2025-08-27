@@ -22,27 +22,26 @@ export default defineConfig(({ mode }) => ({
   build: {
     chunkSizeWarningLimit: 1500, // Увеличиваем лимит до 1.5MB для больших vendor chunks
     rollupOptions: {
+      external: [],
+      // Убеждаемся что React не конфликтует с другими библиотеками
+      plugins: [],
       output: {
         manualChunks: (id) => {
           // Выносим большие библиотеки в отдельные чанки
           if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('react-dom')) {
+            // КРИТИЧНО: React должен быть в одном chunk с зависящими от него библиотеками
+            if (id.includes('react') || id.includes('react-dom') || 
+                id.includes('@radix-ui') || id.includes('react-router')) {
               return 'vendor-react';
             }
             if (id.includes('@supabase')) {
               return 'vendor-supabase';
             }
             if (id.includes('lucide-react')) {
-              return 'vendor-icons';
+              return 'vendor-other';
             }
             if (id.includes('recharts')) {
               return 'vendor-charts';
-            }
-            if (id.includes('@radix-ui')) {
-              return 'vendor-ui';
-            }
-            if (id.includes('react-router')) {
-              return 'vendor-router';
             }
             if (id.includes('@tanstack')) {
               return 'vendor-query';
