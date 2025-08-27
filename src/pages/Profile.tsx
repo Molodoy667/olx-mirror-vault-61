@@ -15,45 +15,52 @@ import { BusinessUpgradeDialog } from '@/components/BusinessUpgradeDialog';
 import { VIPPromotionDialog } from '@/components/VIPPromotionDialog';
 
 export default function Profile() {
-  const { id } = useParams();
+  const { username } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const isOwnProfile = user?.id === id;
   const { isAdmin } = useAdmin();
 
   const { data: profile } = useQuery({
-    queryKey: ['profile', id],
+    queryKey: ['profile', username],
     queryFn: async () => {
+      if (!username) throw new Error('Username is required');
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', id)
+        .eq('username', username)
         .single();
       
       if (error) throw error;
       return data;
     },
+    enabled: !!username,
   });
 
+  const isOwnProfile = user?.username === username;
+
   const { data: listings } = useQuery({
-    queryKey: ['user-listings', id],
+    queryKey: ['user-listings', profile?.id],
     queryFn: async () => {
+      if (!profile?.id) return [];
+      
       const { data, error } = await supabase
         .from('listings')
         .select('*')
-        .eq('user_id', id)
+        .eq('user_id', profile.id)
         .eq('status', 'active')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       return data;
     },
+    enabled: !!profile?.id,
   });
 
   const { data: favorites } = useQuery({
-    queryKey: ['user-favorites', id],
+    queryKey: ['user-favorites', profile?.id],
     queryFn: async () => {
-      if (!isOwnProfile) return [];
+      if (!isOwnProfile || !profile?.id) return [];
       
       const { data, error } = await supabase
         .from('favorites')
@@ -70,7 +77,7 @@ export default function Profile() {
             created_at
           )
         `)
-        .eq('user_id', id);
+        .eq('user_id', profile.id);
       
       if (error) throw error;
       return data;

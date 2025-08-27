@@ -62,6 +62,29 @@ export default function EditProfile() {
     reader.readAsDataURL(file);
   };
 
+  const validateUsername = async (username: string) => {
+    if (!username) return true; // Username is optional
+    
+    // Basic validation
+    if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+      throw new Error('Username може містити лише літери, цифри та підкреслення (3-20 символів)');
+    }
+
+    // Check if username is already taken
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('username', username)
+      .neq('id', user?.id)
+      .single();
+
+    if (data) {
+      throw new Error('Цей username вже зайнятий');
+    }
+    
+    return true;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -69,6 +92,11 @@ export default function EditProfile() {
     setLoading(true);
 
     try {
+      // Validate username if provided
+      if (formData.username) {
+        await validateUsername(formData.username);
+      }
+
       const { error } = await supabase
         .from('profiles')
         .upsert({
@@ -85,7 +113,9 @@ export default function EditProfile() {
         description: "Ваші дані успішно збережено",
       });
 
-      navigate(`/profile/${user.id}`);
+      // Navigate to profile with username or fallback to ID
+      const profilePath = formData.username ? `/profile/@${formData.username}` : `/profile/@${user.id}`;
+      navigate(profilePath);
     } catch (error: any) {
       toast({
         title: "Помилка",
@@ -159,8 +189,13 @@ export default function EditProfile() {
                 id="username"
                 value={formData.username}
                 onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                placeholder="@username"
+                placeholder="username"
               />
+              <p className="text-sm text-muted-foreground mt-1">
+                Ваш профіль буде доступний за адресою: /profile/@{formData.username || 'username'}
+                <br />
+                Лише літери, цифри та підкреслення (3-20 символів)
+              </p>
             </div>
 
             {/* Location */}

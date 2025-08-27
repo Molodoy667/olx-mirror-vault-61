@@ -238,7 +238,7 @@ export default function AdminUsers() {
                         <Button
                           variant="outline"
                           size="icon"
-                          onClick={() => navigate(`/profile/${user.id}`)}
+                          onClick={() => navigate(`/profile/@${user.username || user.id}`)}
                           className="w-8 h-8"
                         >
                           <Edit className="w-3 h-3" />

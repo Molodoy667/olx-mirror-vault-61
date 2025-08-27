@@ -67,7 +67,7 @@ export function UserBottomPanel() {
     {
       icon: User,
       label: 'Профіль',
-      path: `/profile/${user.id}`,
+      path: `/profile/@${user.username || user.id}`,
       color: 'text-orange-500'
     }
   ];
