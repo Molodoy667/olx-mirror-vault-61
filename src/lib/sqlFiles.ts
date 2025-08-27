@@ -73,6 +73,20 @@ export async function loadSQLFiles(): Promise<SQLFile[]> {
         size: 12288,
         lastModified: new Date().toISOString(),
         status: 'idle'
+      },
+      {
+        name: '20250128_create_exec_sql_function.sql',
+        content: await getFileContent('20250128_create_exec_sql_function.sql'),
+        size: 16384,
+        lastModified: new Date().toISOString(),
+        status: 'idle'
+      },
+      {
+        name: 'database_full_analysis.sql',
+        content: await getFileContent('database_full_analysis.sql'),
+        size: 8192,
+        lastModified: new Date().toISOString(),
+        status: 'idle'
       }
     ];
 
@@ -337,7 +351,134 @@ GRANT EXECUTE ON FUNCTION public.get_tables_info() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_table_columns(TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.analyze_database_schema() TO authenticated;
 
-SELECT 'RPC функції створено!' as result;`
+SELECT 'RPC функції створено!' as result;`,
+
+    '20250128_create_exec_sql_function.sql': `-- МІГРАЦІЯ: Функція exec_sql для SQL Manager
+-- Вирішує помилку: Could not find the function public.exec_sql(sql_query) in the schema cache
+
+-- Головна функція для виконання SQL запитів
+CREATE OR REPLACE FUNCTION public.exec_sql(sql_query TEXT)
+RETURNS JSON LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE
+  result_data JSON;
+  affected_rows INTEGER := 0;
+  execution_time_ms INTEGER;
+  execution_start TIMESTAMP;
+  query_type TEXT;
+BEGIN
+  execution_start := clock_timestamp();
+  query_type := UPPER(TRIM(SPLIT_PART(sql_query, ' ', 1)));
+  
+  -- Обмеження безпеки
+  IF query_type IN ('DROP', 'TRUNCATE', 'DELETE') AND sql_query NOT LIKE '%WHERE%' THEN
+    RETURN json_build_object('success', false, 'message', 'Небезпечна операція без WHERE умови');
+  END IF;
+  
+  BEGIN
+    IF query_type = 'SELECT' OR query_type = 'WITH' THEN
+      EXECUTE 'SELECT json_agg(row_to_json(t)) FROM (' || sql_query || ') t' INTO result_data;
+      EXECUTE 'SELECT COUNT(*) FROM (' || sql_query || ') t' INTO affected_rows;
+    ELSE
+      EXECUTE sql_query;
+      GET DIAGNOSTICS affected_rows = ROW_COUNT;
+      result_data := json_build_object('message', 'Запит виконано успішно');
+    END IF;
+    
+    execution_time_ms := EXTRACT(MILLISECONDS FROM (clock_timestamp() - execution_start))::INTEGER;
+    
+    RETURN json_build_object(
+      'success', true,
+      'data', COALESCE(result_data, '[]'::json),
+      'affected_rows', affected_rows,
+      'execution_time_ms', execution_time_ms,
+      'message', 'Запит виконано успішно'
+    );
+    
+  EXCEPTION WHEN OTHERS THEN
+    RETURN json_build_object(
+      'success', false,
+      'message', 'Помилка: ' || SQLERRM,
+      'error', SQLSTATE
+    );
+  END;
+END; $$;
+
+-- Додаткові функції
+CREATE OR REPLACE FUNCTION public.exec_select(sql_query TEXT, row_limit INTEGER DEFAULT 100)
+RETURNS JSON LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE result_data JSON; total_rows INTEGER;
+BEGIN
+  EXECUTE 'SELECT COUNT(*) FROM (' || sql_query || ') t' INTO total_rows;
+  EXECUTE 'SELECT json_agg(row_to_json(t)) FROM (' || sql_query || ' LIMIT ' || row_limit || ') t' INTO result_data;
+  RETURN json_build_object('success', true, 'data', result_data, 'total_rows', total_rows);
+EXCEPTION WHEN OTHERS THEN
+  RETURN json_build_object('success', false, 'message', SQLERRM);
+END; $$;
+
+-- Права доступу
+GRANT EXECUTE ON FUNCTION public.exec_sql(TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.exec_select(TEXT, INTEGER) TO authenticated;
+
+SELECT 'Функція exec_sql створена успішно!' as result;`,
+
+    'database_full_analysis.sql': `-- ПОВНИЙ АНАЛІЗ СТРУКТУРИ БД
+-- Детальний огляд всіх таблиць, колонок, індексів та зв'язків
+
+-- 1. Загальна статистика
+SELECT 
+  'Таблиці' as тип,
+  count(*) as кількість
+FROM pg_tables WHERE schemaname = 'public'
+UNION ALL
+SELECT 'Функції', count(*) FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid WHERE n.nspname = 'public';
+
+-- 2. Список таблиць з деталями
+SELECT 
+  t.tablename as "📁 Таблиця",
+  (SELECT count(*) FROM information_schema.columns c WHERE c.table_name = t.tablename) as "📋 Колонок",
+  COALESCE(s.n_live_tup, 0) as "📊 Рядків",
+  pg_size_pretty(pg_total_relation_size('public.'||t.tablename)) as "💾 Розмір"
+FROM pg_tables t
+LEFT JOIN pg_stat_user_tables s ON t.tablename = s.relname
+WHERE t.schemaname = 'public'
+ORDER BY s.n_live_tup DESC NULLS LAST;
+
+-- 3. Детальна структура колонок
+SELECT 
+  table_name as "🏗️ Таблиця",
+  column_name as "📝 Колонка",
+  data_type as "📊 Тип",
+  is_nullable as "❓ NULL",
+  column_default as "🔧 За замовчуванням"
+FROM information_schema.columns
+WHERE table_schema = 'public'
+ORDER BY table_name, ordinal_position;
+
+-- 4. Foreign Key зв'язки
+SELECT 
+  tc.table_name as "📝 Таблиця",
+  kcu.column_name as "📋 Колонка", 
+  ccu.table_name as "🎯 Зовнішня таблиця",
+  ccu.column_name as "🎯 Зовнішня колонка"
+FROM information_schema.table_constraints tc
+JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
+JOIN information_schema.constraint_column_usage ccu ON ccu.constraint_name = tc.constraint_name
+WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_schema = 'public';
+
+-- 5. Індекси
+SELECT 
+  tablename as "📁 Таблиця",
+  indexname as "⚡ Індекс",
+  CASE WHEN indexdef LIKE '%UNIQUE%' THEN 'Унікальний' ELSE 'Звичайний' END as "Тип"
+FROM pg_indexes 
+WHERE schemaname = 'public'
+ORDER BY tablename;
+
+-- 6. Підсумок
+SELECT 
+  (SELECT count(*) FROM pg_tables WHERE schemaname = 'public') as "📁 Всього таблиць",
+  (SELECT count(*) FROM information_schema.columns WHERE table_schema = 'public') as "📋 Всього колонок",
+  pg_size_pretty(pg_database_size(current_database())) as "💾 Розмір БД";`
   };
 
   return contents[fileName] || `-- SQL file: ${fileName}
