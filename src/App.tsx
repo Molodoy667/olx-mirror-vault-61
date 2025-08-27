@@ -6,6 +6,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Suspense, lazy } from "react";
 import { ScrollToTopRouter } from "@/components/ScrollToTopRouter";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
+import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 
 // Lazy load all pages for better performance
 const Home = lazy(() => import("./pages/Home"));
@@ -107,6 +108,8 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
+          {/* PWA Components */}
+          <PWAInstallPrompt />
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>
