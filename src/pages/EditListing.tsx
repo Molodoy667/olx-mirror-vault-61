@@ -298,16 +298,17 @@ export default function EditListing() {
             </div>
 
             {/* Actions */}
-            <div className="flex gap-4">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => navigate('/my-listings')}
                 disabled={loading}
+                className="w-full sm:w-auto order-2 sm:order-1"
               >
                 Скасувати
               </Button>
-              <Button type="submit" className="flex-1" disabled={loading}>
+              <Button type="submit" className="flex-1 order-1 sm:order-2" disabled={loading}>
                 {loading ? 'Збереження...' : 'Зберегти зміни'}
               </Button>
             </div>

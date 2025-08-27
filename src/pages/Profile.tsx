@@ -84,9 +84,9 @@ export default function Profile() {
       
       <div className="container mx-auto px-4 py-8">
         {/* Profile Header */}
-        <div className="bg-card rounded-lg p-6 mb-6">
-          <div className="flex items-start gap-6">
-            <div className="w-24 h-24 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+        <div className="bg-card rounded-lg p-4 sm:p-6 mb-6">
+          <div className="flex items-start gap-4 sm:gap-6">
+            <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
               {profile?.avatar_url ? (
                 <img 
                   src={profile.avatar_url} 
@@ -94,55 +94,56 @@ export default function Profile() {
                   className="w-full h-full rounded-full object-cover"
                 />
               ) : (
-                <User className="w-12 h-12 text-muted-foreground" />
+                <User className="w-8 h-8 sm:w-12 sm:h-12 text-muted-foreground" />
               )}
             </div>
             
             <div className="flex-1">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h1 className="text-2xl font-bold mb-2">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <h1 className="text-xl sm:text-2xl font-bold mb-2">
                     {profile?.full_name || profile?.username || 'Користувач'}
                   </h1>
                   
-                  <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                  <div className="flex flex-wrap gap-2 sm:gap-4 text-sm text-muted-foreground">
                     {profile?.location && (
                       <div className="flex items-center gap-1">
-                        <MapPin className="w-4 h-4" />
-                        {profile.location}
+                        <MapPin className="w-4 h-4 flex-shrink-0" />
+                        <span className="truncate">{profile.location}</span>
                       </div>
                     )}
                     <div className="flex items-center gap-1">
-                      <Calendar className="w-4 h-4" />
-                      На Novado з {profile?.created_at && new Date(profile.created_at).getFullYear()}
+                      <Calendar className="w-4 h-4 flex-shrink-0" />
+                      <span className="whitespace-nowrap">На Novado з {profile?.created_at && new Date(profile.created_at).getFullYear()}</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <Package className="w-4 h-4" />
-                      {listings?.length || 0} оголошень
+                      <Package className="w-4 h-4 flex-shrink-0" />
+                      <span className="whitespace-nowrap">{listings?.length || 0} оголошень</span>
                     </div>
                   </div>
                 </div>
                 
                 {isOwnProfile && (
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                     {isAdmin && (
                       <Button 
                         variant="default" 
                         size="sm"
                         onClick={() => navigate('/admin')}
-                        className="bg-gradient-to-r from-primary to-primary-dark"
+                        className="bg-gradient-to-r from-primary to-primary-dark w-full sm:w-auto"
                       >
-                        <Shield className="w-4 h-4 mr-2" />
-                        Адмін панель
+                        <Shield className="w-4 h-4 mr-2 flex-shrink-0" />
+                        <span className="truncate">Адмін панель</span>
                       </Button>
                     )}
                     <Button 
                       variant="outline" 
                       size="sm"
                       onClick={() => navigate('/edit-profile')}
+                      className="w-full sm:w-auto"
                     >
-                      <Settings className="w-4 h-4 mr-2" />
-                      Редагувати
+                      <Settings className="w-4 h-4 mr-2 flex-shrink-0" />
+                      <span className="truncate">Редагувати</span>
                     </Button>
                   </div>
                 )}

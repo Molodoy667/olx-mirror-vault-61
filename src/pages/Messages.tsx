@@ -186,11 +186,21 @@ export default function Messages() {
       <Header />
       
       <div className="container mx-auto px-4 py-6">
-        <div className="bg-card rounded-lg shadow-lg h-[600px] flex">
+        <div className="bg-card rounded-lg shadow-lg h-[600px] md:h-[700px] flex flex-col md:flex-row">
           {/* Chat List */}
-          <div className="w-1/3 border-r">
-            <div className="p-4 border-b">
+          <div className={`${selectedChat ? 'hidden md:flex' : 'flex'} md:w-1/3 border-b md:border-b-0 md:border-r flex-col`}>
+            <div className="p-3 md:p-4 border-b flex items-center justify-between">
               <h2 className="text-lg font-semibold">Повідомлення</h2>
+              {selectedChat && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedChat(null)}
+                  className="md:hidden"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                </Button>
+              )}
             </div>
             <ScrollArea className="h-[530px]">
               {chats.length > 0 ? (
@@ -239,11 +249,11 @@ export default function Messages() {
           </div>
 
           {/* Chat Window */}
-          <div className="flex-1 flex flex-col">
+          <div className={`${selectedChat ? 'flex' : 'hidden md:flex'} flex-1 flex-col`}>
             {selectedChat ? (
               <>
                 {/* Chat Header */}
-                <div className="p-4 border-b flex items-center gap-3">
+                <div className="p-3 md:p-4 border-b flex items-center gap-3">
                   <Button
                     variant="ghost"
                     size="icon"
@@ -306,16 +316,22 @@ export default function Messages() {
                 </ScrollArea>
 
                 {/* Input */}
-                <form onSubmit={sendMessage} className="p-4 border-t">
+                <form onSubmit={sendMessage} className="p-3 md:p-4 border-t">
                   <div className="flex gap-2">
                     <Input
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
                       placeholder="Напишіть повідомлення..."
                       disabled={loading}
+                      className="flex-1"
                     />
-                    <Button type="submit" disabled={loading || !newMessage.trim()}>
-                      <Send className="w-5 h-5" />
+                    <Button 
+                      type="submit" 
+                      disabled={loading || !newMessage.trim()}
+                      size="icon"
+                      className="flex-shrink-0"
+                    >
+                      <Send className="w-4 h-4 md:w-5 md:h-5" />
                     </Button>
                   </div>
                 </form>

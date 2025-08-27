@@ -109,8 +109,8 @@ export default function EditProfile() {
           
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Avatar */}
-            <div className="flex items-center gap-6">
-              <div className="w-24 h-24 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
                 {avatarUrl ? (
                   <img 
                     src={avatarUrl} 
@@ -118,7 +118,7 @@ export default function EditProfile() {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <User className="w-12 h-12 text-muted-foreground" />
+                  <User className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground" />
                 )}
               </div>
               <div>
@@ -194,16 +194,17 @@ export default function EditProfile() {
             </div>
 
             {/* Actions */}
-            <div className="flex gap-4">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => navigate(`/profile/${user.id}`)}
                 disabled={loading}
+                className="w-full sm:w-auto order-2 sm:order-1"
               >
                 Скасувати
               </Button>
-              <Button type="submit" className="flex-1" disabled={loading}>
+              <Button type="submit" className="flex-1 order-1 sm:order-2" disabled={loading}>
                 {loading ? 'Збереження...' : 'Зберегти зміни'}
               </Button>
             </div>

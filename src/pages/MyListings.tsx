@@ -106,35 +106,39 @@ export default function MyListings() {
             ) : listings && listings.length > 0 ? (
               <div className="space-y-4">
                 {listings.map((listing) => (
-                  <div key={listing.id} className="bg-card rounded-lg p-4 flex items-center gap-4">
+                  <div key={listing.id} className="bg-card rounded-lg p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
                     <img
                       src={listing.images?.[0] || '/placeholder.svg'}
                       alt={listing.title}
-                      className="w-24 h-24 object-cover rounded-lg"
+                      className="w-full sm:w-24 h-48 sm:h-24 object-cover rounded-lg flex-shrink-0"
                     />
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-lg mb-1">{listing.title}</h3>
-                      <p className="text-muted-foreground mb-2">
+                    <div className="flex-1 min-w-0 w-full">
+                      <h3 className="font-semibold text-base sm:text-lg mb-1 line-clamp-2">{listing.title}</h3>
+                      <p className="text-muted-foreground mb-2 font-medium">
                         {listing.price ? `${listing.price.toLocaleString('uk-UA')} ${listing.currency}` : 'Безкоштовно'}
                       </p>
                       <p className="text-sm text-muted-foreground">
                         {listing.views} переглядів • {listing.location}
                       </p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap sm:flex-nowrap gap-2 w-full sm:w-auto">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => navigate(`/listing/${listing.id}`)}
+                        className="flex-1 sm:flex-none"
                       >
-                        Переглянути
+                        <span className="sm:hidden">Переглянути</span>
+                        <span className="hidden sm:inline">Переглянути</span>
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => navigate(`/edit/${listing.id}`)}
+                        className="flex-shrink-0"
                       >
                         <Edit className="w-4 h-4" />
+                        <span className="sr-only">Редагувати</span>
                       </Button>
                       <Button
                         variant="outline"
@@ -143,8 +147,10 @@ export default function MyListings() {
                           id: listing.id, 
                           currentStatus: listing.status 
                         })}
+                        className="flex-shrink-0"
                       >
                         {listing.status === 'active' ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        <span className="sr-only">{listing.status === 'active' ? 'Деактивувати' : 'Активувати'}</span>
                       </Button>
                       <Button
                         variant="destructive"
@@ -154,8 +160,10 @@ export default function MyListings() {
                             deleteMutation.mutate(listing.id);
                           }
                         }}
+                        className="flex-shrink-0"
                       >
                         <Trash2 className="w-4 h-4" />
+                        <span className="sr-only">Видалити</span>
                       </Button>
                     </div>
                   </div>
