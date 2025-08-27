@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Test</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            background: #f0f0f0;
+        }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Простая диагностика</h1>
+    <div id="results">
+        <p class="success">✅ HTML работает</p>
+        <p class="info">📍 URL: <span id="url"></span></p>
+        <p class="info">🔧 User Agent: <span id="ua"></span></p>
+    </div>
+    
+    <h2>Тест основного приложения:</h2>
+    <button onclick="testMainApp()">Проверить index.html</button>
+    <div id="main-test"></div>
+    
+    <h2>Тест Supabase:</h2>
+    <button onclick="testSupabase()">Проверить Supabase</button>
+    <div id="supabase-test"></div>
+    
+    <script>
+        document.getElementById('url').textContent = window.location.href;
+        document.getElementById('ua').textContent = navigator.userAgent.substring(0, 50) + '...';
+        
+        function testMainApp() {
+            const result = document.getElementById('main-test');
+            result.innerHTML = '<p class="info">🔄 Тестируем основное приложение...</p>';
+            
+            fetch('/index.html')
+                .then(response => response.text())
+                .then(html => {
+                    if (html.includes('<div id="root">')) {
+                        result.innerHTML = '<p class="success">✅ index.html загружается и содержит div#root</p>';
+                        
+                        // Проверяем главный JS файл
+                        const scriptMatch = html.match(/src="([^"]*index[^"]*\.js)"/);
+                        if (scriptMatch) {
+                            const scriptSrc = scriptMatch[1];
+                            result.innerHTML += `<p class="info">📝 Найден скрипт: ${scriptSrc}</p>`;
+                            
+                            fetch(scriptSrc)
+                                .then(jsResponse => {
+                                    if (jsResponse.ok) {
+                                        result.innerHTML += '<p class="success">✅ Главный JS файл доступен</p>';
+                                    } else {
+                                        result.innerHTML += `<p class="error">❌ JS файл недоступен (${jsResponse.status})</p>`;
+                                    }
+                                })
+                                .catch(err => {
+                                    result.innerHTML += `<p class="error">❌ Ошибка загрузки JS: ${err.message}</p>`;
+                                });
+                        }
+                    } else {
+                        result.innerHTML = '<p class="error">❌ index.html не содержит div#root</p>';
+                    }
+                })
+                .catch(error => {
+                    result.innerHTML = `<p class="error">❌ Ошибка: ${error.message}</p>`;
+                });
+        }
+        
+        function testSupabase() {
+            const result = document.getElementById('supabase-test');
+            result.innerHTML = '<p class="info">🔄 Тестируем Supabase...</p>';
+            
+            const SUPABASE_URL = "https://rvitgahgyioydzusrpvw.supabase.co";
+            const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ2aXRnYWhneWlveWR6dXNycHZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU5ODAyMjksImV4cCI6MjA3MTU1NjIyOX0.H1pO_QsPJJB1Sachgfzh6JBkz-wWsk0vQtTUvLfhNas";
+            
+            fetch(`${SUPABASE_URL}/rest/v1/`, {
+                headers: {
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': `Bearer ${SUPABASE_KEY}`
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    result.innerHTML = '<p class="success">✅ Supabase доступен</p>';
+                } else {
+                    result.innerHTML = `<p class="error">❌ Supabase недоступен (${response.status})</p>`;
+                }
+            })
+            .catch(error => {
+                result.innerHTML = `<p class="error">❌ Ошибка Supabase: ${error.message}</p>`;
+            });
+        }
+        
+        // Автоматически запускаем тесты
+        setTimeout(() => {
+            testMainApp();
+            testSupabase();
+        }, 1000);
+    </script>
+</body>
+</html>

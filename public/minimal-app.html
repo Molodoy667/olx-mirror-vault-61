@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OLX - Minimal Test</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            backdrop-filter: blur(10px);
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .success { background: rgba(76, 175, 80, 0.3); }
+        .error { background: rgba(244, 67, 54, 0.3); }
+        .info { background: rgba(33, 150, 243, 0.3); }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        function MinimalApp() {
+            const [status, setStatus] = React.useState('Загрузка...');
+            const [tests, setTests] = React.useState([]);
+            
+            const addTest = (message, type = 'info') => {
+                setTests(prev => [...prev, { message, type, time: new Date().toLocaleTimeString() }]);
+            };
+            
+            React.useEffect(() => {
+                setStatus('React приложение запущено!');
+                addTest('✅ React работает', 'success');
+                addTest('✅ Babel компилирует JSX', 'success');
+                addTest('✅ useState и useEffect работают', 'success');
+                
+                // Тест localStorage
+                try {
+                    localStorage.setItem('test', 'ok');
+                    localStorage.removeItem('test');
+                    addTest('✅ localStorage работает', 'success');
+                } catch (e) {
+                    addTest('❌ localStorage: ' + e.message, 'error');
+                }
+                
+                // Тест fetch
+                if (typeof fetch !== 'undefined') {
+                    addTest('✅ Fetch API доступен', 'success');
+                } else {
+                    addTest('❌ Fetch API недоступен', 'error');
+                }
+                
+                // Тест загрузки main app
+                setTimeout(() => {
+                    fetch('/index.html')
+                        .then(response => {
+                            if (response.ok) {
+                                addTest('✅ Основное приложение доступно', 'success');
+                            } else {
+                                addTest('❌ Основное приложение недоступно', 'error');
+                            }
+                        })
+                        .catch(error => {
+                            addTest('❌ Ошибка загрузки: ' + error.message, 'error');
+                        });
+                }, 1000);
+                
+            }, []);
+            
+            const testMainApp = () => {
+                addTest('🔄 Перенаправление на основное приложение...', 'info');
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 1000);
+            };
+            
+            return React.createElement('div', { className: 'container' }, [
+                React.createElement('h1', { key: 'title' }, '🔍 OLX - Диагностика'),
+                React.createElement('div', { key: 'status', className: 'card' }, [
+                    React.createElement('h2', { key: 'status-title' }, 'Статус: ' + status),
+                    React.createElement('p', { key: 'url' }, 'URL: ' + window.location.href),
+                    React.createElement('p', { key: 'time' }, 'Время: ' + new Date().toLocaleString())
+                ]),
+                React.createElement('div', { key: 'tests', className: 'card' }, [
+                    React.createElement('h3', { key: 'tests-title' }, 'Результаты тестов:'),
+                    ...tests.map((test, index) => 
+                        React.createElement('div', { 
+                            key: index, 
+                            className: `status ${test.type}` 
+                        }, `${test.time} - ${test.message}`)
+                    )
+                ]),
+                React.createElement('div', { key: 'actions', className: 'card' }, [
+                    React.createElement('h3', { key: 'actions-title' }, 'Действия:'),
+                    React.createElement('button', { 
+                        key: 'test-main', 
+                        onClick: testMainApp 
+                    }, 'Попробовать основное приложение'),
+                    React.createElement('button', { 
+                        key: 'refresh', 
+                        onClick: () => window.location.reload() 
+                    }, 'Обновить страницу')
+                ])
+            ]);
+        }
+        
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(React.createElement(MinimalApp));
+    </script>
+</body>
+</html>
