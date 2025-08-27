@@ -33,6 +33,15 @@ import {
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
+// Утилітарна функція для форматування розміру файлу
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
 interface BackupConfig {
   id: string;
   type: 'site' | 'database';
@@ -130,7 +139,23 @@ export default function BackupManager() {
     try {
       const savedBackups = localStorage.getItem('backup-list');
       if (savedBackups) {
-        setBackups(JSON.parse(savedBackups));
+        const backupList = JSON.parse(savedBackups);
+        // Перевіряємо та виправляємо бэкапи з нульовим розміром
+        const fixedBackups = backupList.map((backup: Backup) => {
+          if (backup.size === 0 && backup.data) {
+            // Перераховуємо розмір на основі даних
+            const dataBlob = new Blob([backup.data], { 
+              type: backup.type === 'database' ? 'application/sql' : 'application/json' 
+            });
+            return { ...backup, size: dataBlob.size };
+          }
+          return backup;
+        });
+        setBackups(fixedBackups);
+        // Зберігаємо виправлені дані назад
+        if (JSON.stringify(fixedBackups) !== JSON.stringify(backupList)) {
+          localStorage.setItem('backup-list', JSON.stringify(fixedBackups));
+        }
       }
     } catch (error) {
       console.error('Error loading backups:', error);
@@ -356,6 +381,7 @@ CREATE INDEX IF NOT EXISTS idx_listings_status ON listings(status);
         size: file.size,
         status: 'completed',
         created_at: new Date().toISOString(),
+        completed_at: new Date().toISOString(),
         checksum: `sha256-${Math.random().toString(36).substring(2)}`,
         version: '1.0.0',
         data: fileContent // Зберігаємо реальні дані

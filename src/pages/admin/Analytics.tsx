@@ -390,11 +390,11 @@ export default function AdminAnalytics() {
 
           {/* Charts */}
           <Tabs defaultValue="activity" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="activity">Активність</TabsTrigger>
-              <TabsTrigger value="growth">Зростання</TabsTrigger>
-              <TabsTrigger value="categories">Категорії</TabsTrigger>
-              <TabsTrigger value="locations">Локації</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-1">
+              <TabsTrigger value="activity" className="text-xs sm:text-sm">Активність</TabsTrigger>
+              <TabsTrigger value="growth" className="text-xs sm:text-sm">Зростання</TabsTrigger>
+              <TabsTrigger value="categories" className="text-xs sm:text-sm">Категорії</TabsTrigger>
+              <TabsTrigger value="locations" className="text-xs sm:text-sm">Локації</TabsTrigger>
             </TabsList>
 
             <TabsContent value="activity">
