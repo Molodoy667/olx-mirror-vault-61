@@ -172,16 +172,17 @@ export default function AdminUsers() {
 
           {/* Users Table */}
           <div className="bg-card rounded-lg overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Користувач</TableHead>
-                  <TableHead>Локація</TableHead>
-                  <TableHead>Роль</TableHead>
-                  <TableHead>Дата реєстрації</TableHead>
-                  <TableHead className="text-right">Дії</TableHead>
-                </TableRow>
-              </TableHeader>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-[200px]">Користувач</TableHead>
+                    <TableHead className="min-w-[120px] hidden sm:table-cell">Локація</TableHead>
+                    <TableHead className="min-w-[140px]">Роль</TableHead>
+                    <TableHead className="min-w-[120px] hidden md:table-cell">Дата реєстрації</TableHead>
+                    <TableHead className="text-right min-w-[100px]">Дії</TableHead>
+                  </TableRow>
+                </TableHeader>
               <TableBody>
                 {filteredUsers.map((user) => (
                   <TableRow key={user.id}>
@@ -193,15 +194,18 @@ export default function AdminUsers() {
                         <div className="text-sm text-muted-foreground">
                           ID: {user.id.slice(0, 8)}...
                         </div>
+                        <div className="text-sm text-muted-foreground sm:hidden mt-1">
+                          {user.location && `📍 ${user.location}`}
+                        </div>
                       </div>
                     </TableCell>
-                    <TableCell>{user.location || '—'}</TableCell>
+                    <TableCell className="hidden sm:table-cell">{user.location || '—'}</TableCell>
                     <TableCell>
                       <Select 
                         value={user.role} 
                         onValueChange={(value) => updateUserRole(user.id, value)}
                       >
-                        <SelectTrigger className="w-32">
+                        <SelectTrigger className="w-32 min-w-[120px]">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -226,24 +230,26 @@ export default function AdminUsers() {
                         </SelectContent>
                       </Select>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden md:table-cell">
                       {new Date(user.created_at).toLocaleDateString('uk-UA')}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center gap-2 justify-end">
+                      <div className="flex items-center gap-1 justify-end">
                         <Button
                           variant="outline"
                           size="icon"
                           onClick={() => navigate(`/profile/${user.id}`)}
+                          className="w-8 h-8"
                         >
-                          <Edit className="w-4 h-4" />
+                          <Edit className="w-3 h-3" />
                         </Button>
                         <Button
                           variant="destructive"
                           size="icon"
                           onClick={() => deleteUser(user.id)}
+                          className="w-8 h-8"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3 h-3" />
                         </Button>
                       </div>
                     </TableCell>
@@ -251,6 +257,7 @@ export default function AdminUsers() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           </div>
         </main>
       </div>

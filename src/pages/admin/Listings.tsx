@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Search, Eye, EyeOff, Trash2, Package, MapPin } from 'lucide-react';
+import { Search, Eye, EyeOff, Trash2, Package, MapPin, Crown } from 'lucide-react';
 
 interface Listing {
   id: string;
@@ -205,40 +205,54 @@ export default function AdminListings() {
 
           {/* Listings Table */}
           <div className="bg-card rounded-lg overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Оголошення</TableHead>
-                  <TableHead>Категорія</TableHead>
-                  <TableHead>Автор</TableHead>
-                  <TableHead>Ціна</TableHead>
-                  <TableHead>Статус</TableHead>
-                  <TableHead>Промо</TableHead>
-                  <TableHead>Перегляди</TableHead>
-                  <TableHead className="text-right">Дії</TableHead>
-                </TableRow>
-              </TableHeader>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-[200px]">Оголошення</TableHead>
+                    <TableHead className="min-w-[120px] hidden sm:table-cell">Категорія</TableHead>
+                    <TableHead className="min-w-[120px] hidden md:table-cell">Автор</TableHead>
+                    <TableHead className="min-w-[100px] hidden lg:table-cell">Ціна</TableHead>
+                    <TableHead className="min-w-[100px]">Статус</TableHead>
+                    <TableHead className="min-w-[80px] hidden xl:table-cell">Промо</TableHead>
+                    <TableHead className="min-w-[100px] hidden lg:table-cell">Перегляди</TableHead>
+                    <TableHead className="text-right min-w-[120px]">Дії</TableHead>
+                  </TableRow>
+                </TableHeader>
               <TableBody>
                 {filteredListings.map((listing) => (
                   <TableRow key={listing.id}>
                     <TableCell>
                       <div>
-                        <div className="font-medium">{listing.title}</div>
-                        <div className="text-sm text-muted-foreground flex items-center gap-1">
+                        <div className="font-medium line-clamp-2">{listing.title}</div>
+                        <div className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
                           <MapPin className="w-3 h-3" />
                           {listing.location}
                         </div>
+                        <div className="sm:hidden text-sm text-muted-foreground mt-1 space-y-1">
+                          {listing.categories?.name_uk && (
+                            <div>📂 {listing.categories.name_uk}</div>
+                          )}
+                          <div className="md:hidden">👤 {listing.user_id.slice(0, 8)}...</div>
+                          <div className="lg:hidden">
+                            💰 {listing.price ? 
+                              `${listing.price.toLocaleString('uk-UA')} ${listing.currency}` : 
+                              'Безкоштовно'
+                            }
+                          </div>
+                          <div className="lg:hidden">👁️ {listing.views}</div>
+                        </div>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       <Badge variant="outline">
                         {listing.categories?.name_uk || '—'}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden md:table-cell">
                       ID: {listing.user_id.slice(0, 8)}...
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden lg:table-cell">
                       {listing.price ? 
                         `${listing.price.toLocaleString('uk-UA')} ${listing.currency}` : 
                         'Безкоштовно'
@@ -249,41 +263,53 @@ export default function AdminListings() {
                         {listing.status === 'active' ? 'Активне' : 'Неактивне'}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden xl:table-cell">
                       <Button
                         variant={listing.is_promoted ? "default" : "outline"}
                         size="sm"
                         onClick={() => togglePromotion(listing.id, listing.is_promoted)}
+                        className="text-xs"
                       >
                         {listing.is_promoted ? 'Промо' : 'Звичайне'}
                       </Button>
                     </TableCell>
-                    <TableCell>{listing.views}</TableCell>
+                    <TableCell className="hidden lg:table-cell">{listing.views}</TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center gap-2 justify-end">
+                      <div className="flex items-center gap-1 justify-end">
                         <Button
                           variant="outline"
                           size="icon"
                           onClick={() => navigate(`/listing/${listing.id}`)}
+                          className="w-8 h-8"
                         >
-                          <Eye className="w-4 h-4" />
+                          <Eye className="w-3 h-3" />
                         </Button>
                         <Button
                           variant="outline"
                           size="icon"
                           onClick={() => toggleStatus(listing.id, listing.status)}
+                          className="w-8 h-8"
                         >
                           {listing.status === 'active' ? 
-                            <EyeOff className="w-4 h-4" /> : 
-                            <Eye className="w-4 h-4" />
+                            <EyeOff className="w-3 h-3" /> : 
+                            <Eye className="w-3 h-3" />
                           }
+                        </Button>
+                        <Button
+                          variant={listing.is_promoted ? "default" : "outline"}
+                          size="icon"
+                          onClick={() => togglePromotion(listing.id, listing.is_promoted)}
+                          className="w-8 h-8 xl:hidden"
+                        >
+                          <Crown className="w-3 h-3" />
                         </Button>
                         <Button
                           variant="destructive"
                           size="icon"
                           onClick={() => deleteListing(listing.id)}
+                          className="w-8 h-8"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3 h-3" />
                         </Button>
                       </div>
                     </TableCell>
@@ -291,6 +317,7 @@ export default function AdminListings() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           </div>
         </main>
       </div>
