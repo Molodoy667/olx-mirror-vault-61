@@ -74,8 +74,6 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/listing/:id" element={<ListingDetail />} />
-              <Route path="/:slug" element={<ListingDetail />} />
               <Route path="/search" element={<Search />} />
               <Route path="/create" element={<CreateListing />} />
               <Route path="/profile/:id" element={<Profile />} />
@@ -90,6 +88,8 @@ const App = () => (
               <Route path="/saved-searches" element={<SavedSearches />} />
               <Route path="/chat" element={<Chat />} />
               <Route path="/novado-pro" element={<NovadoPro />} />
+              <Route path="/listing/:id" element={<ListingDetail />} />
+              
               {/* Admin Routes */}
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/users" element={<AdminUsers />} />
@@ -104,7 +104,11 @@ const App = () => (
               <Route path="/admin/moderation" element={<AdminModeration />} />
               <Route path="/admin/sql-manager" element={<SQLManager />} />
               <Route path="/admin/backup-manager" element={<BackupManager />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              
+              {/* SEO-friendly listing routes - must be after all specific routes */}
+              <Route path="/:slug" element={<ListingDetail />} />
+              
+              {/* Catch-all route for 404 */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

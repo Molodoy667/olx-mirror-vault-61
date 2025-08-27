@@ -1,5 +1,6 @@
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useEffect } from "react";
 import { 
   Home, 
   Search, 
@@ -14,6 +15,22 @@ export function UserBottomPanel() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Не показуємо панель для неавторизованих користувачів
+  if (!user) {
+    return null;
+  }
+
+  // Додаємо padding-bottom до body для мобільних пристроїв
+  useEffect(() => {
+    if (window.innerWidth < 768) { // md breakpoint
+      document.body.style.paddingBottom = 'calc(80px + env(safe-area-inset-bottom, 0px))';
+    }
+    
+    return () => {
+      document.body.style.paddingBottom = '';
+    };
+  }, []);
 
   const menuItems = [
     {
@@ -50,7 +67,7 @@ export function UserBottomPanel() {
     {
       icon: User,
       label: 'Профіль',
-      path: user ? `/profile/${user.id}` : '/auth',
+      path: `/profile/${user.id}`,
       color: 'text-orange-500'
     }
   ];

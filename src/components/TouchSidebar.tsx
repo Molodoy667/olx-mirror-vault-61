@@ -250,14 +250,19 @@ export function TouchSidebar({ isOpen, onClose, onToggle }: TouchSidebarProps) {
                   <AvatarImage 
                     src={user.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`} 
                     alt="Avatar"
+                    onError={(e) => {
+                      // Якщо зображення не завантажилося, показуємо fallback
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                    }}
                   />
                   <AvatarFallback className="bg-primary text-primary-foreground text-lg font-semibold">
-                    {user.email?.charAt(0).toUpperCase()}
+                    {user.email?.charAt(0).toUpperCase() || 'U'}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-foreground truncate">
-                    {user.user_metadata?.full_name || 'Користувач'}
+                    {user.user_metadata?.full_name || user.email?.split('@')[0] || 'Користувач'}
                   </p>
                   <p className="text-sm text-muted-foreground truncate">{user.email}</p>
                 </div>
