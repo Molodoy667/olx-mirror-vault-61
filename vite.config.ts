@@ -20,7 +20,7 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
-    chunkSizeWarningLimit: 1500, // Увеличиваем лимит до 1.5MB для больших vendor chunks
+    chunkSizeWarningLimit: 3000, // Увеличиваем лимит до 3MB для больших vendor chunks
     rollupOptions: {
       external: [],
       // Убеждаемся что React не конфликтует с другими библиотеками
