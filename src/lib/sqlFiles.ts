@@ -87,6 +87,13 @@ export async function loadSQLFiles(): Promise<SQLFile[]> {
         size: 8192,
         lastModified: new Date().toISOString(),
         status: 'idle'
+      },
+      {
+        name: '20250128_create_full_database_manager.sql',
+        content: await getFileContent('20250128_create_full_database_manager.sql'),
+        size: 32768,
+        lastModified: new Date().toISOString(),
+        status: 'idle'
       }
     ];
 
@@ -478,7 +485,110 @@ ORDER BY tablename;
 SELECT 
   (SELECT count(*) FROM pg_tables WHERE schemaname = 'public') as "📁 Всього таблиць",
   (SELECT count(*) FROM information_schema.columns WHERE table_schema = 'public') as "📋 Всього колонок",
-  pg_size_pretty(pg_database_size(current_database())) as "💾 Розмір БД";`
+  pg_size_pretty(pg_database_size(current_database())) as "💾 Розмір БД";`,
+
+    '20250128_create_full_database_manager.sql': `-- 🗄️ ПОВНОЦІННИЙ DATABASE MANAGER
+-- Створює RPC функції для повного управління базою даних
+-- 📊 Перегляд таблиць, редагування даних, управління функціями
+
+-- 1. СПИСОК ВСІХ ТАБЛИЦЬ З ДЕТАЛЯМИ
+CREATE OR REPLACE FUNCTION public.get_all_tables()
+RETURNS TABLE (
+  table_name TEXT,
+  row_count BIGINT,
+  table_size TEXT,
+  description TEXT
+)
+LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    t.tablename::TEXT,
+    COALESCE(s.n_live_tup, 0) as row_count,
+    pg_size_pretty(pg_total_relation_size(quote_ident(t.tablename)::regclass))::TEXT,
+    COALESCE(d.description, 'Немає опису')::TEXT
+  FROM pg_tables t
+  LEFT JOIN pg_stat_user_tables s ON t.tablename = s.relname
+  LEFT JOIN pg_description d ON d.objoid = quote_ident(t.tablename)::regclass
+  WHERE t.schemaname = 'public'
+  ORDER BY COALESCE(s.n_live_tup, 0) DESC;
+END; $$;
+
+-- 2. СТРУКТУРА ТАБЛИЦІ З FOREIGN KEYS
+CREATE OR REPLACE FUNCTION public.get_table_structure(table_name_param TEXT)
+RETURNS TABLE (
+  column_name TEXT,
+  data_type TEXT,
+  is_nullable TEXT,
+  column_default TEXT,
+  is_primary_key BOOLEAN,
+  is_foreign_key BOOLEAN,
+  foreign_table TEXT,
+  foreign_column TEXT
+)
+LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  RETURN QUERY SELECT 
+    c.column_name::TEXT,
+    c.data_type::TEXT,
+    c.is_nullable::TEXT,
+    COALESCE(c.column_default, '')::TEXT,
+    CASE WHEN pk.column_name IS NOT NULL THEN true ELSE false END,
+    CASE WHEN fk.column_name IS NOT NULL THEN true ELSE false END,
+    COALESCE(fk.foreign_table_name, '')::TEXT,
+    COALESCE(fk.foreign_column_name, '')::TEXT
+  FROM information_schema.columns c
+  LEFT JOIN (SELECT ku.column_name FROM information_schema.table_constraints tc
+    JOIN information_schema.key_column_usage ku ON tc.constraint_name = ku.constraint_name
+    WHERE tc.constraint_type = 'PRIMARY KEY' AND tc.table_name = table_name_param) pk 
+    ON c.column_name = pk.column_name
+  LEFT JOIN (SELECT ku.column_name, ccu.table_name AS foreign_table_name, ccu.column_name AS foreign_column_name
+    FROM information_schema.table_constraints tc
+    JOIN information_schema.key_column_usage ku ON tc.constraint_name = ku.constraint_name
+    JOIN information_schema.constraint_column_usage ccu ON tc.constraint_name = ccu.constraint_name
+    WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_name = table_name_param) fk 
+    ON c.column_name = fk.column_name
+  WHERE c.table_name = table_name_param AND c.table_schema = 'public'
+  ORDER BY c.ordinal_position;
+END; $$;
+
+-- 3. ОТРИМАННЯ ДАНИХ З ПАГІНАЦІЄЮ
+CREATE OR REPLACE FUNCTION public.get_table_data(
+  table_name_param TEXT,
+  page_number INT DEFAULT 1,
+  page_size INT DEFAULT 50,
+  search_query TEXT DEFAULT '',
+  order_column TEXT DEFAULT '',
+  order_direction TEXT DEFAULT 'ASC'
+)
+RETURNS TABLE (data JSONB, total_count BIGINT, page_count INT)
+LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE
+  offset_val INT;
+  total_rows BIGINT;
+  sql_query TEXT;
+BEGIN
+  offset_val := (page_number - 1) * page_size;
+  
+  -- Підрахунок загальної кількості
+  EXECUTE format('SELECT COUNT(*) FROM %I', table_name_param) INTO total_rows;
+  
+  -- Основний запит
+  sql_query := format('SELECT json_agg(row_to_json(%I.*)) FROM (SELECT * FROM %I LIMIT %s OFFSET %s) %I',
+    table_name_param, table_name_param, page_size, offset_val, table_name_param);
+  
+  RETURN QUERY SELECT 
+    COALESCE((SELECT json_agg FROM (EXECUTE sql_query) AS t(json_agg)), '[]'::jsonb),
+    total_rows,
+    CEIL(total_rows::NUMERIC / page_size)::INT;
+END; $$;
+
+-- ПРАВА ДОСТУПУ
+GRANT EXECUTE ON FUNCTION public.get_all_tables() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_table_structure(TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_table_data(TEXT, INT, INT, TEXT, TEXT, TEXT) TO authenticated;
+
+SELECT '✅ Database Manager RPC функції створені успішно!' as result;`
   };
 
   return contents[fileName] || `-- SQL file: ${fileName}

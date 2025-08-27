@@ -5,6 +5,7 @@ import { Header } from '@/components/Header';
 import { AdminHeader } from '@/components/admin/AdminHeader';
 import { SQLFileManager } from '@/components/admin/SQLFileManager';
 import { DatabaseAnalyzer } from '@/components/admin/DatabaseAnalyzer';
+import { FullDatabaseManager } from '@/components/admin/FullDatabaseManager';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -52,6 +53,7 @@ interface TableInfo {
 
 export default function SQLManager() {
   const { isAdmin, isLoading: adminLoading } = useAdmin();
+  const [activeTab, setActiveTab] = useState<'sql-editor' | 'database-manager' | 'file-manager' | 'analyzer'>('database-manager');
   const [sqlQuery, setSqlQuery] = useState('');
   const [isExecuting, setIsExecuting] = useState(false);
   const [results, setResults] = useState<SQLResult[]>([]);
@@ -455,11 +457,75 @@ export default function SQLManager() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">SQL Менеджер</h1>
           <p className="text-muted-foreground">
-            Управління базою даних через SQL запити, імпорт та експорт файлів
+            Повноцінне управління базою даних
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Система вкладок */}
+        <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
+          <nav className="flex space-x-8">
+            <button
+              onClick={() => setActiveTab('database-manager')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'database-manager'
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <Table className="h-4 w-4" />
+                <span>Управління БД</span>
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('sql-editor')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'sql-editor'
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <FileCode className="h-4 w-4" />
+                <span>SQL Редактор</span>
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('file-manager')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'file-manager'
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <FileText className="h-4 w-4" />
+                <span>Файл Менеджер</span>
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('analyzer')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'analyzer'
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <DatabaseIcon className="h-4 w-4" />
+                <span>Аналізатор БД</span>
+              </div>
+            </button>
+          </nav>
+        </div>
+
+        {/* Контент вкладок */}
+        {activeTab === 'database-manager' && (
+          <FullDatabaseManager />
+        )}
+
+        {activeTab === 'sql-editor' && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Ліва колонка - SQL редактор та файли */}
           <div className="space-y-6">
             {/* SQL редактор */}
@@ -792,42 +858,47 @@ export default function SQLManager() {
               </CardContent>
             </Card>
 
-            {/* Database Analyzer */}
-            <DatabaseAnalyzer
-              onMigrationGenerated={(migration) => {
-                // Додаємо згенеровану міграцію до SQL запитів
-                setSqlQuery(migration);
-                toast({
-                  title: 'Міграція згенерована',
-                  description: 'Міграцію додано до поля SQL запиту. Перевірте та виконайте її.',
-                });
-              }}
-            />
-
-            {/* SQL File Manager */}
-            <SQLFileManager 
-              onFileExecute={(fileName, result) => {
-                // Добавляем результат выполнения в историю
-                const newResult: SQLResult = {
-                  success: result.rowsAffected !== undefined,
-                  message: result.message,
-                  data: result,
-                  executionTime: result.executionTime,
-                  rowsAffected: result.rowsAffected
-                };
-                
-                setResults(prev => [
-                  {
-                    ...newResult,
-                    query: `-- Executed from file: ${fileName}`,
-                    timestamp: new Date()
-                  },
-                  ...prev
-                ]);
-              }}
-            />
           </div>
-        </div>
+          </div>
+        )}
+
+        {activeTab === 'file-manager' && (
+          <SQLFileManager 
+            onFileExecute={(fileName, result) => {
+              // Добавляем результат выполнения в историю
+              const newResult: SQLResult = {
+                success: result.rowsAffected !== undefined,
+                message: result.message,
+                data: result,
+                executionTime: result.executionTime,
+                rowsAffected: result.rowsAffected
+              };
+              
+              setResults(prev => [
+                {
+                  ...newResult,
+                  query: `-- Executed from file: ${fileName}`,
+                  timestamp: new Date()
+                },
+                ...prev
+              ]);
+            }}
+          />
+        )}
+
+        {activeTab === 'analyzer' && (
+          <DatabaseAnalyzer
+            onMigrationGenerated={(migration) => {
+              // Додаємо згенеровану міграцію до SQL запитів
+              setSqlQuery(migration);
+              setActiveTab('sql-editor'); // Переключаємося на SQL редактор
+              toast({
+                title: 'Міграція згенерована',
+                description: 'Міграцію додано до поля SQL запиту. Перевірте та виконайте її.',
+              });
+            }}
+          />
+        )}
       </div>
     </div>
   );
