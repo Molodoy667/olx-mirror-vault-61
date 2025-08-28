@@ -77,8 +77,9 @@ export default function CreateListing() {
         description: "Оголошення створено",
       });
 
-      // Навігація прямо по ID оголошення (новий формат)
-      navigate(`/${data.id}`);
+      // Використовуємо SEO-friendly URL з бази даних
+      const seoUrl = await getOrCreateSeoUrl(data.id, data.title);
+      navigate(seoUrl);
     } catch (error: any) {
       toast({
         title: "Помилка",

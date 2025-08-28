@@ -164,8 +164,13 @@ export const AnimatedProductCard = ({
   const handleCardClick = async () => {
     if (isLoading) return;
     
-    // Навігація прямо по ID оголошення (новий формат)
-    navigate(`/${id}`);
+    try {
+      const seoUrl = await getOrCreateSeoUrl(id, title);
+      navigate(seoUrl);
+    } catch (error) {
+      console.error('Error navigating to listing:', error);
+      navigate(`/listing/${id}`);
+    }
   };
 
   return (

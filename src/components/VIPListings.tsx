@@ -26,8 +26,13 @@ export function VIPListings() {
   }, [api]);
 
   const handleListingClick = async (listingId: string, title: string) => {
-    // Навігація прямо по ID оголошення (новий формат)
-    navigate(`/${listingId}`);
+    try {
+      const seoUrl = await getOrCreateSeoUrl(listingId, title);
+      navigate(seoUrl);
+    } catch (error) {
+      console.error('Error navigating to listing:', error);
+      navigate(`/listing/${listingId}`);
+    }
   };
 
   const formatPrice = (price: number | null, currency: string) => {

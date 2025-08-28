@@ -385,9 +385,14 @@ export default function Messages() {
                         {message.listings && (
                           <div className="flex justify-center mb-4">
                             <div 
-                              onClick={() => {
-                                // Навігація прямо по ID оголошення (новий формат)
-                                navigate(`/${message.listings.id}`);
+                              onClick={async () => {
+                                try {
+                                  const { getOrCreateSeoUrl } = await import('@/lib/seo');
+                                  const seoUrl = await getOrCreateSeoUrl(message.listings.id, message.listings.title);
+                                  navigate(seoUrl);
+                                } catch (error) {
+                                  navigate(`/listing/${message.listings.id}`);
+                                }
                               }}
                               className="bg-muted/50 px-4 py-2 rounded-lg text-sm text-muted-foreground cursor-pointer hover:bg-muted"
                             >

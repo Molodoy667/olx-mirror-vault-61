@@ -17,12 +17,6 @@ export function DynamicRoute() {
         return;
       }
 
-      // Перевіряємо чи це SEO URL оголошення (містить дефіс і 6 символів після)
-      if (isSeoUrl(`/${dynamicParam}`)) {
-        setRouteType('listing');
-        return;
-      }
-
       // Перевіряємо чи це profile_id (тільки 6 цифр)
       if (/^\d{6}$/.test(dynamicParam)) {
         // Перевіряємо чи існує такий profile_id
@@ -33,9 +27,8 @@ export function DynamicRoute() {
         }
       }
 
-      // Перевіряємо чи це UUID оголошення (8+ символів, може містити дефіси)
-      // Формат: E3C8984D або E3C8984D-1234-5678-9ABC-123456789ABC
-      if (/^[A-F0-9]{8}(-[A-F0-9]{4}){0,3}(-[A-F0-9]{12})?$/i.test(dynamicParam)) {
+      // Перевіряємо чи це SEO URL оголошення (містить дефіс і 6 символів після)
+      if (isSeoUrl(`/${dynamicParam}`)) {
         setRouteType('listing');
         return;
       }

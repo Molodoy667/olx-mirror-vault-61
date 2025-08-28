@@ -379,7 +379,19 @@ export default function AdminReports() {
                       variant="outline"
                       size="sm"
                       className="mt-2"
-                      onClick={() => navigate(`/${selectedReport.listing_id}`)}
+                      onClick={async () => {
+                        try {
+                          const { getSeoUrl } = await import('@/lib/seo');
+                          const seoUrl = await getSeoUrl(selectedReport.listing_id);
+                          if (seoUrl) {
+                            navigate(seoUrl);
+                          } else {
+                            navigate(`/listing/${selectedReport.listing_id}`);
+                          }
+                        } catch (error) {
+                          navigate(`/listing/${selectedReport.listing_id}`);
+                        }
+                      }}
                     >
                       Переглянути оголошення
                     </Button>

@@ -435,7 +435,19 @@ export default function AdminMessages() {
                           variant="outline"
                           size="sm"
                           className="mt-2"
-                          onClick={() => navigate(`/${selectedMessage.listing_id}`)}
+                          onClick={async () => {
+                            try {
+                              const { getSeoUrl } = await import('@/lib/seo');
+                              const seoUrl = await getSeoUrl(selectedMessage.listing_id);
+                              if (seoUrl) {
+                                navigate(seoUrl);
+                              } else {
+                                navigate(`/listing/${selectedMessage.listing_id}`);
+                              }
+                            } catch (error) {
+                              navigate(`/listing/${selectedMessage.listing_id}`);
+                            }
+                          }}
                         >
                           Переглянути оголошення
                         </Button>

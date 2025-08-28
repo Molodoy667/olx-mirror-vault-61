@@ -509,7 +509,15 @@ export default function AdminModeration() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => navigate(`/${listing.id}`)}
+                              onClick={async () => {
+                                try {
+                                  const { getOrCreateSeoUrl } = await import('@/lib/seo');
+                                  const seoUrl = await getOrCreateSeoUrl(listing.id, listing.title);
+                                  navigate(seoUrl);
+                                } catch (error) {
+                                  navigate(`/listing/${listing.id}`);
+                                }
+                              }}
                             >
                               <Eye className="w-4 h-4" />
                             </Button>
@@ -609,7 +617,19 @@ export default function AdminModeration() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => navigate(`/${report.listing_id}`)}
+                                onClick={async () => {
+                                  try {
+                                    const { getSeoUrl } = await import('@/lib/seo');
+                                    const seoUrl = await getSeoUrl(report.listing_id);
+                                    if (seoUrl) {
+                                      navigate(seoUrl);
+                                    } else {
+                                      navigate(`/listing/${report.listing_id}`);
+                                    }
+                                  } catch (error) {
+                                    navigate(`/listing/${report.listing_id}`);
+                                  }
+                                }}
                               >
                                 <Eye className="w-4 h-4" />
                               </Button>

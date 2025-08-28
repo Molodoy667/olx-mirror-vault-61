@@ -201,8 +201,17 @@ export function NotificationBell() {
       case 'listing_views':
       case 'price_offer':
         if (notification.data?.listing_id) {
-          // Навігація прямо по ID оголошення (новий формат)
-          navigate(`/${notification.data.listing_id}`);
+          try {
+            const { getSeoUrl } = await import('@/lib/seo');
+            const seoUrl = await getSeoUrl(notification.data.listing_id);
+            if (seoUrl) {
+              navigate(seoUrl);
+            } else {
+              navigate(`/listing/${notification.data.listing_id}`);
+            }
+          } catch (error) {
+            navigate(`/listing/${notification.data.listing_id}`);
+          }
         }
         break;
       default:

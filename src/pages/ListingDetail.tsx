@@ -30,18 +30,8 @@ export default function ListingDetail() {
   // Определяем ID объявления из URL
   const listingId = useMemo(() => {
     if (id) return id; // Старый формат /listing/:id
-    
-    // Новый формат - прямой UUID в URL
-    const pathSegments = location.pathname.split('/');
-    const lastSegment = pathSegments[pathSegments.length - 1];
-    
-    // Проверяем, является ли последний сегмент UUID
-    if (lastSegment && /^[A-F0-9]{8}(-[A-F0-9]{4}){0,3}(-[A-F0-9]{12})?$/i.test(lastSegment)) {
-      return lastSegment;
-    }
-    
     return null; // SEO формат будет обработан в useEffect
-  }, [id, location.pathname]);
+  }, [id]);
 
   // Обработка SEO URL
   const { data: seoListingId, isLoading: seoLoading } = useQuery({

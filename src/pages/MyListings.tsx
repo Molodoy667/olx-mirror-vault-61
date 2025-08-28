@@ -130,8 +130,13 @@ export default function MyListings() {
                         variant="outline"
                         size="sm"
                         onClick={async () => {
-                          // Навігація прямо по ID оголошення (новий формат)
-                          navigate(`/${listing.id}`);
+                          try {
+                            const seoUrl = await getOrCreateSeoUrl(listing.id, listing.title);
+                            navigate(seoUrl);
+                          } catch (error) {
+                            console.error('Error navigating to listing:', error);
+                            navigate(`/listing/${listing.id}`);
+                          }
                         }}
                         className="flex-1 sm:flex-none"
                       >
