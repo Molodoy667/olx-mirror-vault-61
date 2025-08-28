@@ -12,7 +12,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { toast } from '@/hooks/use-toast';
+import { 
+  showSuccessToast, 
+  showErrorToast, 
+  showSaveSuccess, 
+  showSaveError,
+  showFileUploadSuccess,
+  showFileUploadError,
+  showValidationError 
+} from '@/lib/toast-helpers';
 import { 
   Settings as SettingsIcon, 
   Save, 
@@ -242,20 +250,16 @@ function SeoManagementSection() {
       const { regenerateAllSeoUrls } = await import('@/lib/seo');
       const result = await regenerateAllSeoUrls();
       
-      toast({
-        title: "SEO URL оновлено",
-        description: `Успішно: ${result.success}, Помилок: ${result.errors}`,
-        variant: result.errors > 0 ? "destructive" : "default"
-      });
+      if (result.errors > 0) {
+        showErrorToast("SEO URL оновлено з помилками", `Успішно: ${result.success}, Помилок: ${result.errors}`);
+      } else {
+        showSuccessToast("SEO URL оновлено", `Успішно оновлено ${result.success} URL`);
+      }
       
       // Обновляем статистику
       await loadSeoStats();
     } catch (error) {
-      toast({
-        title: "Помилка",
-        description: "Не вдалося оновити SEO URL",
-        variant: "destructive"
-      });
+      showErrorToast("Помилка", "Не вдалося оновити SEO URL");
     } finally {
       setRegenerating(false);
     }
@@ -546,16 +550,9 @@ export default function AdminSettings() {
       // Зберігаємо в localStorage (в реальному додатку - в БД)
       localStorage.setItem('admin_settings', JSON.stringify(settings));
       
-      toast({
-        title: "Успішно",
-        description: "Налаштування збережено",
-      });
+      showSaveSuccess("Налаштування");
     } catch (error) {
-      toast({
-        title: "Помилка", 
-        description: "Не вдалося зберегти налаштування",
-        variant: "destructive",
-      });
+      showSaveError("налаштування");
     } finally {
       setSaving(false);
     }
@@ -613,20 +610,13 @@ export default function AdminSettings() {
 
       handleSettingChange(fieldName, publicUrl);
       
-      toast({
-        title: "Файл завантажено",
-        description: "Зображення успішно завантажено",
-      });
+      showFileUploadSuccess("Зображення");
     } catch (error: any) {
       setErrors(prev => ({ 
         ...prev, 
         [fieldName]: error.message || 'Помилка завантаження файлу' 
       }));
-      toast({
-        title: "Помилка",
-        description: "Не вдалося завантажити файл",
-        variant: "destructive"
-      });
+      showFileUploadError(error.message || 'Не вдалося завантажити файл');
     } finally {
       setUploadingFile(null);
     }
@@ -635,11 +625,7 @@ export default function AdminSettings() {
   // Функція збереження налаштувань
   const handleSave = async () => {
     if (!validateAllFields()) {
-      toast({
-        title: "Помилка валідації",
-        description: "Будь ласка, виправте всі помилки перед збереженням",
-        variant: "destructive"
-      });
+      showValidationError("Будь ласка, виправте всі помилки перед збереженням");
       return;
     }
 
@@ -651,16 +637,9 @@ export default function AdminSettings() {
 
       if (error) throw error;
 
-      toast({
-        title: "Налаштування збережено",
-        description: "Всі зміни успішно збережено",
-      });
+      showSaveSuccess("Налаштування");
     } catch (error: any) {
-      toast({
-        title: "Помилка",
-        description: error.message || "Не вдалося зберегти налаштування",
-        variant: "destructive"
-      });
+      showSaveError("налаштування", error.message);
     } finally {
       setSaving(false);
     }
