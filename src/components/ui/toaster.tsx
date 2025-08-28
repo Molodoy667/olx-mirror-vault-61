@@ -12,7 +12,7 @@ import { CheckCircle, XCircle, AlertCircle, Info } from "lucide-react"
 
 const TOAST_DURATION = 3000; // 3 секунды
 
-function ToastWithProgress({ id, title, description, action, variant, ...props }: any) {
+function ToastWithProgress({ id, title, description, action, variant, onOpenChange, ...props }: any) {
   const [progress, setProgress] = useState(100);
 
   useEffect(() => {
@@ -24,22 +24,26 @@ function ToastWithProgress({ id, title, description, action, variant, ...props }
       
       if (remaining <= 0) {
         clearInterval(interval);
+        // Закрываем toast когда progress достигает 0
+        if (onOpenChange) {
+          onOpenChange(false);
+        }
       }
     }, 50);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [onOpenChange]);
 
   const getIcon = () => {
     switch (variant) {
       case 'success':
-        return <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />;
+        return <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0" />;
       case 'destructive':
-        return <XCircle className="w-5 h-5 text-red-600 flex-shrink-0" />;
+        return <XCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0" />;
       case 'warning':
-        return <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0" />;
+        return <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0" />;
       case 'info':
-        return <Info className="w-5 h-5 text-blue-600 flex-shrink-0" />;
+        return <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />;
       default:
         return null;
     }
@@ -48,13 +52,13 @@ function ToastWithProgress({ id, title, description, action, variant, ...props }
   const getProgressColor = () => {
     switch (variant) {
       case 'success':
-        return 'bg-green-500';
+        return 'bg-green-500 dark:bg-green-400';
       case 'destructive':
-        return 'bg-red-500';
+        return 'bg-red-500 dark:bg-red-400';
       case 'warning':
-        return 'bg-amber-500';
+        return 'bg-amber-500 dark:bg-amber-400';
       case 'info':
-        return 'bg-blue-500';
+        return 'bg-blue-500 dark:bg-blue-400';
       default:
         return 'bg-primary';
     }
@@ -80,7 +84,7 @@ function ToastWithProgress({ id, title, description, action, variant, ...props }
       </div>
       
       {/* Progress Bar */}
-      <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/10 overflow-hidden rounded-b-lg">
+      <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/10 dark:bg-white/10 overflow-hidden rounded-b-lg">
         <div 
           className={`h-full transition-all duration-75 ease-linear ${getProgressColor()}`}
           style={{ width: `${progress}%` }}
@@ -97,7 +101,7 @@ export function Toaster() {
 
   return (
     <ToastProvider>
-      {toasts.map(function ({ id, title, description, action, ...props }) {
+      {toasts.map(function ({ id, title, description, action, onOpenChange, ...props }) {
         return (
           <ToastWithProgress 
             key={id} 
@@ -105,6 +109,7 @@ export function Toaster() {
             title={title}
             description={description}
             action={action}
+            onOpenChange={onOpenChange}
             {...props}
           />
         )

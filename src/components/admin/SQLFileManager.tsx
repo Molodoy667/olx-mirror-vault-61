@@ -19,7 +19,11 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { 
+  showSuccessToast, 
+  showErrorToast,
+  showInfoToast 
+} from '@/lib/toast-helpers';
 import { loadSQLFiles, executeSQLFile, deleteSQLFile } from '@/lib/sqlFiles';
 
 interface SQLFile {
@@ -57,11 +61,7 @@ export function SQLFileManager({ onFileExecute }: SQLFileManagerProps) {
       setFiles(loadedFiles);
     } catch (error) {
       console.error('Error loading SQL files:', error);
-      toast({
-        title: 'Помилка',
-        description: 'Не вдалося завантажити список SQL файлів',
-        variant: 'destructive'
-      });
+      showErrorToast('Помилка', 'Не вдалося завантажити список SQL файлів');
     } finally {
       setLoading(false);
     }
@@ -139,11 +139,11 @@ export function SQLFileManager({ onFileExecute }: SQLFileManagerProps) {
 
       // Показываем соответствующий toast
       if (result.success) {
-        toast({
-          title: hasWarnings ? '⚠️ Виконано з попередженнями' : '✅ Успішно виконано!',
-          description: `SQL файл "${fileName}" ${hasWarnings ? 'виконано з попередженнями' : 'виконано успішно'}. Час: ${executionTime}мс`,
-          variant: hasWarnings ? 'default' : 'default'
-        });
+        if (hasWarnings) {
+          showErrorToast('⚠️ Виконано з попередженнями', `SQL файл "${fileName}" виконано з попередженнями. Час: ${executionTime}мс`);
+        } else {
+          showSuccessToast('✅ Успішно виконано!', `SQL файл "${fileName}" виконано успішно. Час: ${executionTime}мс`);
+        }
       } else {
         throw new Error(result.error || 'Помилка виконання SQL');
       }
@@ -178,11 +178,7 @@ export function SQLFileManager({ onFileExecute }: SQLFileManagerProps) {
           : f
       ));
 
-      toast({
-        title: '❌ Помилка виконання',
-        description: `Файл "${fileName}": ${errorDetails.shortMessage}`,
-        variant: 'destructive'
-      });
+      showErrorToast('❌ Помилка виконання', `Файл "${fileName}": ${errorDetails.shortMessage}`);
     }
   };
 
@@ -265,16 +261,9 @@ export function SQLFileManager({ onFileExecute }: SQLFileManagerProps) {
       await deleteSQLFile(fileName);
       setFiles(prev => prev.filter(f => f.name !== fileName));
       
-      toast({
-        title: 'Файл видалено',
-        description: `SQL файл "${fileName}" видалено успішно`,
-      });
+      showSuccessToast('Файл видалено', `SQL файл "${fileName}" видалено успішно`);
     } catch (error: any) {
-      toast({
-        title: 'Помилка видалення',
-        description: `Не вдалося видалити файл: ${error.message}`,
-        variant: 'destructive'
-      });
+      showErrorToast('Помилка видалення', `Не вдалося видалити файл: ${error.message}`);
     }
   };
 
@@ -370,10 +359,7 @@ export function SQLFileManager({ onFileExecute }: SQLFileManagerProps) {
               className="w-full sm:w-auto"
               onClick={() => {
                 // В реальності тут був би file input для завантаження
-                toast({
-                  title: 'Завантаження файлів',
-                  description: 'Помістіть .sql файли в папку /sql для їх відображення тут',
-                });
+                showInfoToast('Завантаження файлів', 'Помістіть .sql файли в папку /sql для їх відображення тут');
               }}
             >
               <Upload className="h-4 w-4 mr-2" />

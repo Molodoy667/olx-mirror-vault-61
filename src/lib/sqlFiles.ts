@@ -501,9 +501,8 @@ export async function executeSQLFile(fileName: string, onProgress?: (progress: n
       if (onProgress) onProgress(10 + (i / statements.length) * 80);
       
       try {
-        const { data, error, count } = await import('@/integrations/supabase/client').then(m => 
-          m.supabase.rpc('exec_sql', { query: statement })
-        );
+        const { supabase } = await import('@/integrations/supabase/client');
+        const { data, error, count } = await supabase.rpc('exec_sql', { query: statement });
         
         if (error) throw error;
         
