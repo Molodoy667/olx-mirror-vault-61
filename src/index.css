@@ -296,4 +296,30 @@ All colors MUST be HSL.
   .bottom-panel-shadow {
     box-shadow: 0 -4px 20px -5px hsl(0 0% 0% / 0.1);
   }
+
+  /* Text scrolling animation for long titles */
+  @keyframes scroll-text {
+    0% {
+      transform: translateX(0);
+    }
+    25% {
+      transform: translateX(0);
+    }
+    75% {
+      transform: translateX(calc(-100% + 300px));
+    }
+    100% {
+      transform: translateX(calc(-100% + 300px));
+    }
+  }
+
+  .animate-scroll-text {
+    animation: scroll-text linear infinite;
+    white-space: nowrap;
+    will-change: transform;
+  }
+
+  .animate-scroll-text:hover {
+    animation-play-state: paused;
+  }
 }

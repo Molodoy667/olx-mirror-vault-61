@@ -100,39 +100,66 @@ export function ProductCard({
         }
       }}
     >
-      <div className="relative">
+      <div className="relative aspect-square overflow-hidden bg-muted">
         <img 
           src={image} 
           alt={title}
-          className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
         />
-        <button 
-          onClick={handleToggleFavorite}
-          className="absolute top-2 right-2 w-8 h-8 bg-white/80 backdrop-blur rounded-full flex items-center justify-center hover:bg-white transition-colors"
-        >
-          <Heart className={`w-4 h-4 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
-        </button>
-        {isPromoted && (
-          <span className="absolute top-2 left-2 bg-yellow-400 text-xs font-semibold px-2 py-1 rounded">
-            ТОП
-          </span>
-        )}
-      </div>
-      
-      <div className="p-4">
-        <h3 className="font-semibold text-foreground mb-2 line-clamp-2 min-h-[48px]">
-          {title}
-        </h3>
+
+        {/* Glass overlay for better text readability */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/20" />
         
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xl font-bold text-primary">{price}</span>
+        {/* Top elements */}
+        <div className="absolute top-2 left-2 right-2 flex justify-between items-start">
+          {isPromoted && (
+            <span className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white font-bold text-xs px-2 py-1 rounded shadow-lg">
+              ТОП
+            </span>
+          )}
+          
+          <button 
+            onClick={handleToggleFavorite}
+            className="bg-white/20 backdrop-blur-md hover:bg-white/30 transition-all duration-200 border border-white/20 w-8 h-8 rounded-full flex items-center justify-center"
+          >
+            <Heart className={`w-4 h-4 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+          </button>
         </div>
-        
-        <div className="flex items-center text-sm text-muted-foreground space-x-2">
-          <MapPin className="w-3 h-3" />
-          <span>{location}</span>
-          <span>•</span>
-          <span>{date}</span>
+
+        {/* Price under like button (glass frame) */}
+        <div className="absolute top-12 right-2">
+          <div className="bg-white/20 backdrop-blur-md rounded-lg px-3 py-1 border border-white/20 shadow-lg">
+            <p className="text-sm font-bold text-white drop-shadow-md text-right">
+              {price}
+            </p>
+          </div>
+        </div>
+
+        {/* Title at bottom (glass frame with scrolling) */}
+        <div className="absolute bottom-0 left-0 right-0">
+          <div className="bg-white/20 backdrop-blur-md border-t border-white/20 p-3">
+            <div className="overflow-hidden">
+              <h3 
+                className={`text-white font-semibold text-lg drop-shadow-md transition-transform duration-300 ease-linear ${
+                  title.length > 40 ? 'animate-scroll-text' : ''
+                }`}
+                style={{
+                  animationDuration: title.length > 40 ? `${title.length * 0.15}s` : undefined
+                }}
+              >
+                {title}
+              </h3>
+            </div>
+            
+            {/* Location and date */}
+            <div className="flex items-center justify-between mt-2 text-sm text-white/90">
+              <div className="flex items-center gap-1">
+                <MapPin className="w-3 h-3" />
+                <span className="truncate">{location}</span>
+              </div>
+              <span className="text-xs">{date}</span>
+            </div>
+          </div>
         </div>
       </div>
     </Card>
