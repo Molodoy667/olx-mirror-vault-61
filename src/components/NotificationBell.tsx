@@ -13,6 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 import { uk } from "date-fns/locale";
+import { getSeoUrl } from '@/lib/seo';
 
 interface Notification {
   id: string;
@@ -202,7 +203,6 @@ export function NotificationBell() {
       case 'price_offer':
         if (notification.data?.listing_id) {
           try {
-            const { getSeoUrl } = await import('@/lib/seo');
             const seoUrl = await getSeoUrl(notification.data.listing_id);
             if (seoUrl) {
               navigate(seoUrl);

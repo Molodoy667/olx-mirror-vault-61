@@ -1,11 +1,14 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import Profile from '@/pages/Profile';
-import ListingDetail from '@/pages/ListingDetail';
-import NotFound from '@/pages/NotFound';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import { isSeoUrl } from '@/lib/seo';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { getUserIdByProfileId } from '@/lib/profileUtils';
 import { supabase } from '@/integrations/supabase/client';
+
+// Lazy load components to avoid conflicts with App-original
+const Profile = lazy(() => import('@/pages/Profile'));
+const ListingDetail = lazy(() => import('@/pages/ListingDetail'));
+const NotFound = lazy(() => import('@/pages/NotFound'));
 
 export function DynamicRoute() {
   const { dynamicParam } = useParams<{ dynamicParam: string }>();
@@ -128,12 +131,24 @@ export function DynamicRoute() {
   }
 
   if (routeType === 'profile') {
-    return <Profile />;
+    return (
+      <Suspense fallback={<LoadingSpinner />}>
+        <Profile />
+      </Suspense>
+    );
   }
 
   if (routeType === 'listing') {
-    return <ListingDetail />;
+    return (
+      <Suspense fallback={<LoadingSpinner />}>
+        <ListingDetail />
+      </Suspense>
+    );
   }
 
-  return <NotFound />;
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <NotFound />
+    </Suspense>
+  );
 }

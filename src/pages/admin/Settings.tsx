@@ -21,6 +21,7 @@ import {
   showFileUploadError,
   showValidationError 
 } from '@/lib/toast-helpers';
+import { regenerateAllSeoUrls } from '@/lib/seo';
 import { 
   Settings as SettingsIcon, 
   Save, 
@@ -247,7 +248,6 @@ function SeoManagementSection() {
   const handleRegenerateAll = async () => {
     setRegenerating(true);
     try {
-      const { regenerateAllSeoUrls } = await import('@/lib/seo');
       const result = await regenerateAllSeoUrls();
       
       if (result.errors > 0) {
