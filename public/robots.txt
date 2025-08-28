@@ -2,7 +2,7 @@ User-agent: *
 Allow: /
 
 # Sitemap
-Sitemap: https://your-domain.vercel.app/sitemap.xml
+Sitemap: https://your-domain.com/sitemap.xml
 
 # Disallow admin areas
 Disallow: /admin/

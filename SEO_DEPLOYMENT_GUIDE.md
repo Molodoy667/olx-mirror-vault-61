@@ -28,7 +28,7 @@ SELECT * FROM seo_urls LIMIT 1;
 SELECT * FROM pg_policies WHERE tablename = 'seo_urls';
 ```
 
-### **3. Развертывание на Vercel:**
+### **3. Развертывание:**
 
 ```bash
 # Закоммитьте изменения
@@ -36,7 +36,7 @@ git add .
 git commit -m "Fix SEO URL system with database integration"
 git push origin main
 
-# Vercel автоматически развернет изменения
+# Разверните на вашем хостинге
 ```
 
 ## 🔧 **Что было исправлено:**
