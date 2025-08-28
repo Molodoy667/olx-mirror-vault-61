@@ -60,4 +60,6 @@ export default defineConfig(({ mode }) => ({
     port: 4173,
     host: true,
   },
+  // SPA fallback для production - всі маршрути повертають index.html
+  appType: 'spa',
 }));
