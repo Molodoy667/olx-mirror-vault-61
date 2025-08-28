@@ -385,18 +385,9 @@ export default function Messages() {
                         {message.listings && (
                           <div className="flex justify-center mb-4">
                             <div 
-                              onClick={async () => {
-                                try {
-                                  const { getSeoUrl } = await import('@/lib/seo');
-                                  const seoUrl = await getSeoUrl(message.listings.id);
-                                  if (seoUrl) {
-                                    navigate(seoUrl);
-                                  } else {
-                                    navigate(`/listing/${message.listings.id}`);
-                                  }
-                                } catch (error) {
-                                  navigate(`/listing/${message.listings.id}`);
-                                }
+                              onClick={() => {
+                                // Навігація прямо по ID оголошення (новий формат)
+                                navigate(`/${message.listings.id}`);
                               }}
                               className="bg-muted/50 px-4 py-2 rounded-lg text-sm text-muted-foreground cursor-pointer hover:bg-muted"
                             >

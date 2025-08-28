@@ -509,7 +509,7 @@ export default function AdminModeration() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => navigate(`/listing/${listing.id}`)}
+                              onClick={() => navigate(`/${listing.id}`)}
                             >
                               <Eye className="w-4 h-4" />
                             </Button>
@@ -609,7 +609,7 @@ export default function AdminModeration() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => navigate(`/listing/${report.listing_id}`)}
+                                onClick={() => navigate(`/${report.listing_id}`)}
                               >
                                 <Eye className="w-4 h-4" />
                               </Button>

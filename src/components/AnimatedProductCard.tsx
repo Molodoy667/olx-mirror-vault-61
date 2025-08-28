@@ -164,15 +164,8 @@ export const AnimatedProductCard = ({
   const handleCardClick = async () => {
     if (isLoading) return;
     
-    try {
-      // Используем SEO-friendly URL из базы данных
-      const seoUrl = await getOrCreateSeoUrl(id, title);
-      navigate(seoUrl);
-    } catch (error) {
-      console.error('Error navigating to listing:', error);
-      // В случае ошибки используем старый формат
-      navigate(`/listing/${id}`);
-    }
+    // Навігація прямо по ID оголошення (новий формат)
+    navigate(`/${id}`);
   };
 
   return (

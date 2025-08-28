@@ -281,13 +281,8 @@ export default function AdminListings() {
                           variant="outline"
                           size="icon"
                           onClick={async () => {
-                            try {
-                              const seoUrl = await getOrCreateSeoUrl(listing.id, listing.title);
-                              navigate(seoUrl);
-                            } catch (error) {
-                              console.error('Error navigating to listing:', error);
-                              navigate(`/listing/${listing.id}`);
-                            }
+                            // Навігація прямо по ID оголошення (новий формат)
+                            navigate(`/${listing.id}`);
                           }}
                           className="w-8 h-8"
                         >

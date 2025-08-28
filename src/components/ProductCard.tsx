@@ -91,13 +91,8 @@ export function ProductCard({
     <Card 
       className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer group"
       onClick={async () => {
-        try {
-          const seoUrl = await getOrCreateSeoUrl(id, title);
-          navigate(seoUrl);
-        } catch (error) {
-          console.error('Error navigating to listing:', error);
-          navigate(`/listing/${id}`);
-        }
+        // Навігація прямо по ID оголошення (новий формат)
+        navigate(`/${id}`);
       }}
     >
       <div className="relative aspect-square overflow-hidden bg-muted">

@@ -379,7 +379,7 @@ export default function AdminReports() {
                       variant="outline"
                       size="sm"
                       className="mt-2"
-                      onClick={() => navigate(`/listing/${selectedReport.listing_id}`)}
+                      onClick={() => navigate(`/${selectedReport.listing_id}`)}
                     >
                       Переглянути оголошення
                     </Button>

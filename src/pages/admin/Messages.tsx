@@ -435,7 +435,7 @@ export default function AdminMessages() {
                           variant="outline"
                           size="sm"
                           className="mt-2"
-                          onClick={() => navigate(`/listing/${selectedMessage.listing_id}`)}
+                          onClick={() => navigate(`/${selectedMessage.listing_id}`)}
                         >
                           Переглянути оголошення
                         </Button>

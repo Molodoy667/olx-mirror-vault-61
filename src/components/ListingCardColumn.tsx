@@ -136,13 +136,8 @@ export const ListingCardColumn = ({
       )}
       onClick={async () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
-        try {
-          const seoUrl = await getOrCreateSeoUrl(id, title);
-          navigate(seoUrl);
-        } catch (error) {
-          console.error('Error navigating to listing:', error);
-          navigate(`/listing/${id}`);
-        }
+        // Навігація прямо по ID оголошення (новий формат)
+        navigate(`/${id}`);
       }}
     >
       {/* Image Section */}

@@ -23,7 +23,7 @@ export function DynamicRoute() {
         return;
       }
 
-      // Перевіряємо чи це profile_id (6 цифр)
+      // Перевіряємо чи це profile_id (тільки 6 цифр)
       if (/^\d{6}$/.test(dynamicParam)) {
         // Перевіряємо чи існує такий profile_id
         const userId = await getUserIdByProfileId(dynamicParam);
@@ -31,6 +31,13 @@ export function DynamicRoute() {
           setRouteType('profile');
           return;
         }
+      }
+
+      // Перевіряємо чи це UUID оголошення (8+ символів, може містити дефіси)
+      // Формат: E3C8984D або E3C8984D-1234-5678-9ABC-123456789ABC
+      if (/^[A-F0-9]{8}(-[A-F0-9]{4}){0,3}(-[A-F0-9]{12})?$/i.test(dynamicParam)) {
+        setRouteType('listing');
+        return;
       }
 
       // Якщо нічого не підійшло

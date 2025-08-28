@@ -12,14 +12,8 @@ export function useSeoUrl() {
    * Переход к объявлению по SEO-friendly URL
    */
   const navigateToListing = useCallback(async (title: string, id: string) => {
-    try {
-      const seoUrl = await getOrCreateSeoUrl(id, title);
-      navigate(seoUrl);
-    } catch (error) {
-      console.error('Error navigating to listing:', error);
-      // В случае ошибки используем старый формат
-      navigate(`/listing/${id}`);
-    }
+    // Навігація прямо по ID оголошення (новий формат)
+    navigate(`/${id}`);
   }, [navigate]);
 
   /**
