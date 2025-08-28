@@ -1555,8 +1555,12 @@ export async function executeSQLFile(fileName: string, content: string): Promise
   const { supabase } = await import('@/integrations/supabase/client');
   
   const startTime = Date.now();
+  const warnings: string[] = [];
   
   try {
+    // Аналізуємо SQL перед виконанням
+    const sqlAnalysis = analyzeSQLContent(content);
+    
     // Спробуємо виконати через exec_sql функцію
     const { data, error } = await supabase.rpc('exec_sql', {
       sql_query: content
@@ -1566,33 +1570,182 @@ export async function executeSQLFile(fileName: string, content: string): Promise
     
     if (error) {
       console.error('Помилка виконання SQL:', error);
+      
+      // Детальний аналіз помилки
+      const errorAnalysis = analyzeErrorMessage(error.message);
+      
       return {
         success: false,
-        message: `Помилка виконання SQL: ${error.message}`,
+        message: `❌ Помилка виконання SQL`,
         error: error.message,
-        executionTime
+        executionTime,
+        details: errorAnalysis.details,
+        suggestion: errorAnalysis.suggestion,
+        errorType: errorAnalysis.type
       };
+    }
+    
+    // Аналізуємо результат
+    let rowsAffected = 0;
+    let resultMessage = '';
+    
+    if (Array.isArray(data)) {
+      rowsAffected = data.length;
+      resultMessage = `Отримано ${rowsAffected} рядків`;
+    } else if (data && typeof data === 'object') {
+      if (data.rowsAffected !== undefined) {
+        rowsAffected = data.rowsAffected;
+      } else if (data.command) {
+        // PostgreSQL command result
+        if (data.command === 'CREATE') {
+          resultMessage = 'Об\'єкт створено успішно';
+        } else if (data.command === 'INSERT') {
+          rowsAffected = data.rowCount || 0;
+          resultMessage = `Вставлено ${rowsAffected} рядків`;
+        } else if (data.command === 'UPDATE') {
+          rowsAffected = data.rowCount || 0;
+          resultMessage = `Оновлено ${rowsAffected} рядків`;
+        } else if (data.command === 'DELETE') {
+          rowsAffected = data.rowCount || 0;
+          resultMessage = `Видалено ${rowsAffected} рядків`;
+        } else {
+          resultMessage = `Команда ${data.command} виконана`;
+        }
+      } else {
+        resultMessage = 'SQL виконано успішно';
+      }
+    } else {
+      resultMessage = 'SQL виконано успішно';
+    }
+    
+    // Додаємо попередження залежно від контенту
+    if (sqlAnalysis.hasDropStatements && !sqlAnalysis.hasIfExists) {
+      warnings.push('Використовується DROP без IF EXISTS - може спричинити помилки');
+    }
+    
+    if (sqlAnalysis.hasAlterStatements) {
+      warnings.push('Файл містить ALTER statements - перевірте сумісність зі схемою');
+    }
+    
+    if (executionTime > 5000) {
+      warnings.push(`Тривалий час виконання: ${executionTime}мс`);
     }
     
     return {
       success: true,
-      message: `SQL файл ${fileName} виконано успішно`,
+      message: resultMessage || `✅ SQL файл ${fileName} виконано успішно`,
       data: data,
       executionTime,
-      rowsAffected: Array.isArray(data) ? data.length : 1
+      rowsAffected,
+      warnings: warnings.length > 0 ? warnings : undefined,
+      tablesCreated: sqlAnalysis.tablesCreated,
+      functionsCreated: sqlAnalysis.functionsCreated,
+      analysisInfo: {
+        statements: sqlAnalysis.statementCount,
+        complexity: sqlAnalysis.complexity,
+        safetyLevel: warnings.length === 0 ? 'safe' : 'warning'
+      }
     };
     
   } catch (error: any) {
     const executionTime = Date.now() - startTime;
     console.error('Критична помилка виконання SQL:', error);
     
+    const errorAnalysis = analyzeErrorMessage(error.message);
+    
     return {
       success: false,
-      message: `Критична помилка: ${error.message}`,
+      message: `❌ Критична помилка виконання`,
       error: error.message,
-      executionTime
+      executionTime,
+      details: errorAnalysis.details,
+      suggestion: errorAnalysis.suggestion,
+      errorType: 'critical'
     };
   }
+}
+
+// Функція для аналізу SQL контенту
+function analyzeSQLContent(sql: string) {
+  const lowerSQL = sql.toLowerCase();
+  
+  // Извлекаем созданные таблицы
+  const tableMatches = sql.match(/create\s+table\s+(?:if\s+not\s+exists\s+)?(\w+)/gi) || [];
+  const tablesCreated = tableMatches.map(match => {
+    const parts = match.split(/\s+/);
+    return parts[parts.length - 1];
+  });
+  
+  // Извлекаем созданные функции
+  const functionMatches = sql.match(/create\s+(?:or\s+replace\s+)?function\s+(\w+)/gi) || [];
+  const functionsCreated = functionMatches.map(match => {
+    const parts = match.split(/\s+/);
+    return parts[parts.length - 1];
+  });
+  
+  // Подсчитываем statements
+  const statements = sql.split(';').filter(s => s.trim().length > 0);
+  
+  return {
+    tablesCreated,
+    functionsCreated,
+    statementCount: statements.length,
+    hasDropStatements: lowerSQL.includes('drop'),
+    hasAlterStatements: lowerSQL.includes('alter'),
+    hasIfExists: lowerSQL.includes('if exists'),
+    complexity: statements.length > 10 ? 'high' : statements.length > 5 ? 'medium' : 'low'
+  };
+}
+
+// Функція для аналізу повідомлень про помилки
+function analyzeErrorMessage(errorMessage: string) {
+  const lowerError = errorMessage.toLowerCase();
+  
+  if (lowerError.includes('relation') && lowerError.includes('does not exist')) {
+    return {
+      type: 'relation_not_found',
+      details: 'Таблиця або представлення не існує в базі даних',
+      suggestion: 'Перевірте назву таблиці та виконайте необхідні міграції'
+    };
+  }
+  
+  if (lowerError.includes('function') && lowerError.includes('does not exist')) {
+    return {
+      type: 'function_not_found',
+      details: 'Функція не знайдена в базі даних',
+      suggestion: 'Перевірте назву функції та її параметри, або створіть функцію'
+    };
+  }
+  
+  if (lowerError.includes('syntax error')) {
+    return {
+      type: 'syntax_error',
+      details: 'Синтаксична помилка в SQL коді',
+      suggestion: 'Перевірте правильність SQL синтаксису'
+    };
+  }
+  
+  if (lowerError.includes('permission denied')) {
+    return {
+      type: 'permission_denied',
+      details: 'Недостатньо прав для виконання операції',
+      suggestion: 'Зверніться до адміністратора для надання прав'
+    };
+  }
+  
+  if (lowerError.includes('already exists')) {
+    return {
+      type: 'already_exists',
+      details: 'Об\'єкт з такою назвою вже існує',
+      suggestion: 'Використайте IF NOT EXISTS або видаліть існуючий об\'єкт'
+    };
+  }
+  
+  return {
+    type: 'unknown',
+    details: 'Невизначена помилка бази даних',
+    suggestion: 'Перевірте SQL код та підключення до бази даних'
+  };
 }
 
 export async function deleteSQLFile(fileName: string): Promise<void> {

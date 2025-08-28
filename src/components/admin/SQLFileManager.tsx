@@ -27,10 +27,16 @@ interface SQLFile {
   content: string;
   size: number;
   lastModified: string;
-  status?: 'idle' | 'running' | 'success' | 'error';
+  status?: 'idle' | 'running' | 'success' | 'error' | 'warning';
   result?: any;
   error?: string;
   executionTime?: number;
+  startTime?: number;
+  warnings?: string[];
+  rowsAffected?: number;
+  tablesCreated?: string[];
+  functionsCreated?: string[];
+  lastExecuted?: string;
 }
 
 interface SQLFileManagerProps {
@@ -64,11 +70,21 @@ export function SQLFileManager({ onFileExecute }: SQLFileManagerProps) {
   // Выполнение SQL файла
   const executeFile = async (file: SQLFile) => {
     const fileName = file.name;
+    const startTime = Date.now();
     
     // Обновляем статус файла
     setFiles(prev => prev.map(f => 
       f.name === fileName 
-        ? { ...f, status: 'running', result: null, error: undefined }
+        ? { 
+            ...f, 
+            status: 'running', 
+            result: null, 
+            error: undefined,
+            warnings: [],
+            startTime,
+            executionTime: undefined,
+            rowsAffected: undefined
+          }
         : f
     ));
 
@@ -89,50 +105,158 @@ export function SQLFileManager({ onFileExecute }: SQLFileManagerProps) {
     try {
       // Выполняем SQL файл через утилиту
       const result = await executeSQLFile(fileName, file.content);
+      const executionTime = Date.now() - startTime;
 
       clearInterval(progressInterval);
       setExecutionProgress(prev => ({ ...prev, [fileName]: 100 }));
+
+      // Анализируем результат для определения статуса
+      const hasWarnings = result.warnings && result.warnings.length > 0;
+      const finalStatus = result.success ? (hasWarnings ? 'warning' : 'success') : 'error';
+
+      // Анализируем SQL для определения что было создано
+      const sqlContent = file.content.toLowerCase();
+      const tablesCreated = extractCreatedObjects(sqlContent, 'table');
+      const functionsCreated = extractCreatedObjects(sqlContent, 'function');
 
       // Обновляем статус файла
       setFiles(prev => prev.map(f => 
         f.name === fileName 
           ? { 
               ...f, 
-              status: 'success', 
+              status: finalStatus,
               result,
-              executionTime: result.executionTime 
+              executionTime,
+              lastExecuted: new Date().toISOString(),
+              warnings: result.warnings || [],
+              rowsAffected: result.rowsAffected || 0,
+              tablesCreated,
+              functionsCreated,
+              error: result.success ? undefined : (result.error || 'Невідома помилка')
             }
           : f
       ));
 
-      toast({
-        title: 'Успіх!',
-        description: `SQL файл "${fileName}" виконано успішно`,
-      });
+      // Показываем соответствующий toast
+      if (result.success) {
+        toast({
+          title: hasWarnings ? '⚠️ Виконано з попередженнями' : '✅ Успішно виконано!',
+          description: `SQL файл "${fileName}" ${hasWarnings ? 'виконано з попередженнями' : 'виконано успішно'}. Час: ${executionTime}мс`,
+          variant: hasWarnings ? 'default' : 'default'
+        });
+      } else {
+        throw new Error(result.error || 'Помилка виконання SQL');
+      }
 
       onFileExecute?.(fileName, result);
 
     } catch (error: any) {
+      const executionTime = Date.now() - startTime;
+      
       clearInterval(progressInterval);
       setExecutionProgress(prev => ({ ...prev, [fileName]: 0 }));
+
+      // Детальный анализ ошибки
+      const errorDetails = analyzeError(error);
 
       // Обновляем статус файла с ошибкой
       setFiles(prev => prev.map(f => 
         f.name === fileName 
           ? { 
               ...f, 
-              status: 'error', 
-              error: error.message || 'Неизвестная ошибка'
+              status: 'error',
+              error: errorDetails.message,
+              executionTime,
+              lastExecuted: new Date().toISOString(),
+              result: {
+                success: false,
+                error: errorDetails.message,
+                details: errorDetails.details,
+                suggestion: errorDetails.suggestion
+              }
             }
           : f
       ));
 
       toast({
-        title: 'Помилка виконання',
-        description: `Помилка у файлі "${fileName}": ${error.message}`,
+        title: '❌ Помилка виконання',
+        description: `Файл "${fileName}": ${errorDetails.shortMessage}`,
         variant: 'destructive'
       });
     }
+  };
+
+  // Функция для извлечения созданных объектов из SQL
+  const extractCreatedObjects = (sql: string, type: 'table' | 'function'): string[] => {
+    const objects: string[] = [];
+    const regex = type === 'table' 
+      ? /create\s+table\s+(?:if\s+not\s+exists\s+)?(\w+)/gi
+      : /create\s+(?:or\s+replace\s+)?function\s+(\w+)/gi;
+    
+    let match;
+    while ((match = regex.exec(sql)) !== null) {
+      objects.push(match[1]);
+    }
+    return objects;
+  };
+
+  // Функция для анализа ошибок
+  const analyzeError = (error: any) => {
+    const message = error.message || error.toString();
+    
+    // Определяем тип ошибки и даем рекомендации
+    if (message.includes('relation') && message.includes('does not exist')) {
+      return {
+        message: `Таблиця не існує: ${message}`,
+        shortMessage: 'Таблиця не існує',
+        details: 'Перевірте, чи правильно вказана назва таблиці та чи була вона створена',
+        suggestion: 'Спочатку виконайте міграції для створення необхідних таблиць'
+      };
+    }
+    
+    if (message.includes('function') && message.includes('does not exist')) {
+      return {
+        message: `Функція не існує: ${message}`,
+        shortMessage: 'Функція не існує',
+        details: 'Перевірте назву функції та її параметри',
+        suggestion: 'Переконайтеся, що функція була створена або імпортована'
+      };
+    }
+    
+    if (message.includes('syntax error')) {
+      return {
+        message: `Синтаксична помилка SQL: ${message}`,
+        shortMessage: 'Синтаксична помилка',
+        details: 'Перевірте правильність SQL синтаксису',
+        suggestion: 'Використайте SQL валідатор або перевірте документацію PostgreSQL'
+      };
+    }
+    
+    if (message.includes('permission denied')) {
+      return {
+        message: `Недостатньо прав доступу: ${message}`,
+        shortMessage: 'Недостатньо прав',
+        details: 'У вас немає прав для виконання цієї операції',
+        suggestion: 'Зверніться до адміністратора для надання необхідних прав'
+      };
+    }
+    
+    if (message.includes('already exists')) {
+      return {
+        message: `Об\'єкт вже існує: ${message}`,
+        shortMessage: 'Об\'єкт існує',
+        details: 'Спроба створити об\'єкт, який вже існує в базі даних',
+        suggestion: 'Використайте CREATE IF NOT EXISTS або видаліть існуючий об\'єкт'
+      };
+    }
+    
+    // Общая ошибка
+    return {
+      message: message,
+      shortMessage: 'Помилка виконання',
+      details: 'Детальна інформація в повідомленні помилки',
+      suggestion: 'Перевірте SQL код та з\'єднання з базою даних'
+    };
   };
 
   // Удаление SQL файла
@@ -164,6 +288,8 @@ export function SQLFileManager({ onFileExecute }: SQLFileManagerProps) {
         return <Clock className="h-4 w-4 text-yellow-500 animate-spin" />;
       case 'success':
         return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'warning':
+        return <AlertTriangle className="h-4 w-4 text-yellow-600" />;
       case 'error':
         return <XCircle className="h-4 w-4 text-red-500" />;
       default:
@@ -174,13 +300,15 @@ export function SQLFileManager({ onFileExecute }: SQLFileManagerProps) {
   const getStatusBadge = (file: SQLFile) => {
     switch (file.status) {
       case 'running':
-        return <Badge variant="secondary">Виконується...</Badge>;
+        return <Badge variant="secondary" className="animate-pulse">⏳ Виконується...</Badge>;
       case 'success':
-        return <Badge variant="default" className="bg-green-500">Успішно</Badge>;
+        return <Badge variant="default" className="bg-green-500 hover:bg-green-600">✅ Успішно</Badge>;
+      case 'warning':
+        return <Badge variant="secondary" className="bg-yellow-500 hover:bg-yellow-600 text-white">⚠️ З попередженнями</Badge>;
       case 'error':
-        return <Badge variant="destructive">Помилка</Badge>;
+        return <Badge variant="destructive">❌ Помилка</Badge>;
       default:
-        return <Badge variant="outline">Готовий</Badge>;
+        return <Badge variant="outline">📄 Готовий</Badge>;
     }
   };
 
@@ -276,16 +404,44 @@ export function SQLFileManager({ onFileExecute }: SQLFileManagerProps) {
                         <div className="text-sm text-muted-foreground">
                           {formatFileSize(file.size)} • {formatDate(file.lastModified)}
                         </div>
-                        {file.executionTime && (
-                          <div className="text-sm text-green-600 dark:text-green-400">
-                            Виконано за {file.executionTime}мс
-                          </div>
-                        )}
-                        {file.error && (
-                          <div className="text-sm text-red-600 dark:text-red-400">
-                            Помилка: {file.error}
-                          </div>
-                        )}
+                        {/* Дополнительная информация о файле */}
+                        <div className="flex flex-col gap-1 mt-1">
+                          {file.lastExecuted && (
+                            <div className="text-xs text-muted-foreground">
+                              Останнє виконання: {formatDate(file.lastExecuted)}
+                            </div>
+                          )}
+                          {file.executionTime && (
+                            <div className="text-xs text-green-600 dark:text-green-400">
+                              ⏱️ Час виконання: {file.executionTime}мс
+                            </div>
+                          )}
+                          {file.rowsAffected !== undefined && file.rowsAffected > 0 && (
+                            <div className="text-xs text-blue-600 dark:text-blue-400">
+                              📊 Рядків змінено: {file.rowsAffected}
+                            </div>
+                          )}
+                          {file.tablesCreated && file.tablesCreated.length > 0 && (
+                            <div className="text-xs text-purple-600 dark:text-purple-400">
+                              📋 Створено таблиць: {file.tablesCreated.join(', ')}
+                            </div>
+                          )}
+                          {file.functionsCreated && file.functionsCreated.length > 0 && (
+                            <div className="text-xs text-indigo-600 dark:text-indigo-400">
+                              ⚙️ Створено функцій: {file.functionsCreated.join(', ')}
+                            </div>
+                          )}
+                          {file.warnings && file.warnings.length > 0 && (
+                            <div className="text-xs text-yellow-600 dark:text-yellow-400">
+                              ⚠️ Попередження: {file.warnings.length} шт.
+                            </div>
+                          )}
+                          {file.error && (
+                            <div className="text-xs text-red-600 dark:text-red-400">
+                              ❌ Помилка: {file.error}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -354,15 +510,82 @@ export function SQLFileManager({ onFileExecute }: SQLFileManagerProps) {
                     </div>
                   )}
 
-                  {/* Результат виконання */}
-                  {file.result && file.status === 'success' && (
-                    <div className="mt-3 p-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-md">
-                      <div className="text-sm text-green-800 dark:text-green-200">
-                        <strong>Результат:</strong> {file.result.message}
-                      </div>
-                      {file.result.rowsAffected !== undefined && (
-                        <div className="text-sm text-green-700 dark:text-green-300">
-                          Зачеплено рядків: {file.result.rowsAffected}
+                  {/* Детальний результат виконання */}
+                  {file.result && (
+                    <div className="mt-3">
+                      {/* Успішний результат */}
+                      {file.status === 'success' && (
+                        <div className="p-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-md">
+                          <div className="text-sm text-green-800 dark:text-green-200">
+                            <strong>✅ Успішно виконано!</strong>
+                          </div>
+                          {file.result.message && (
+                            <div className="text-sm text-green-700 dark:text-green-300 mt-1">
+                              {file.result.message}
+                            </div>
+                          )}
+                          <div className="text-xs text-green-600 dark:text-green-400 mt-2 flex flex-wrap gap-4">
+                            {file.executionTime && (
+                              <span>⏱️ {file.executionTime}мс</span>
+                            )}
+                            {file.rowsAffected !== undefined && (
+                              <span>📊 {file.rowsAffected} рядків</span>
+                            )}
+                            {file.tablesCreated && file.tablesCreated.length > 0 && (
+                              <span>📋 {file.tablesCreated.length} таблиць</span>
+                            )}
+                            {file.functionsCreated && file.functionsCreated.length > 0 && (
+                              <span>⚙️ {file.functionsCreated.length} функцій</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Результат з попередженнями */}
+                      {file.status === 'warning' && (
+                        <div className="p-3 bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                          <div className="text-sm text-yellow-800 dark:text-yellow-200">
+                            <strong>⚠️ Виконано з попередженнями</strong>
+                          </div>
+                          {file.result.message && (
+                            <div className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                              {file.result.message}
+                            </div>
+                          )}
+                          {file.warnings && file.warnings.length > 0 && (
+                            <div className="text-xs text-yellow-600 dark:text-yellow-400 mt-2">
+                              <strong>Попередження:</strong>
+                              <ul className="list-disc list-inside mt-1">
+                                {file.warnings.map((warning, index) => (
+                                  <li key={index}>{warning}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Результат з помилкою */}
+                      {file.status === 'error' && (
+                        <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-md">
+                          <div className="text-sm text-red-800 dark:text-red-200">
+                            <strong>❌ Помилка виконання</strong>
+                          </div>
+                          {file.result.details && (
+                            <div className="text-sm text-red-700 dark:text-red-300 mt-1">
+                              {file.result.details}
+                            </div>
+                          )}
+                          {file.error && (
+                            <div className="text-xs text-red-600 dark:text-red-400 mt-2 font-mono bg-red-100 dark:bg-red-900/50 p-2 rounded">
+                              {file.error}
+                            </div>
+                          )}
+                          {file.result.suggestion && (
+                            <div className="text-xs text-red-500 dark:text-red-400 mt-2">
+                              <strong>💡 Рекомендація:</strong> {file.result.suggestion}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
