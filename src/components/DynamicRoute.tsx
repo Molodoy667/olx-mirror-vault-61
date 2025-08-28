@@ -19,12 +19,18 @@ export function DynamicRoute() {
 
       // Перевіряємо чи це profile_id (тільки 6 цифр)
       if (/^\d{6}$/.test(dynamicParam)) {
-        // Перевіряємо чи існує такий profile_id
+        // Спочатку перевіряємо чи існує такий profile_id
         const userId = await getUserIdByProfileId(dynamicParam);
         if (userId) {
           setRouteType('profile');
           return;
         }
+      }
+
+      // Перевіряємо чи це 6-символьний фрагмент з UUID (тимчасовий fallback)
+      if (/^[A-F0-9]{6}$/i.test(dynamicParam)) {
+        setRouteType('profile');
+        return;
       }
 
       // Перевіряємо чи це SEO URL оголошення (містить дефіс і 6 символів після)

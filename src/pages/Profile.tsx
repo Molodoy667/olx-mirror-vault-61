@@ -35,8 +35,21 @@ export default function Profile() {
           return data;
         }
       }
+
+      // Перевіряємо чи це 6-символьний фрагмент з UUID (тимчасовий fallback)
+      if (id && id.length === 6 && /^[A-F0-9]+$/i.test(id)) {
+        // Шукаємо профіль де user_id починається з цих символів
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .ilike('id', `${id}%`);
+        
+        if (!error && data && data.length > 0) {
+          return data[0]; // Повертаємо перший знайдений профіль
+        }
+      }
       
-      // Якщо не знайшли по profile_id, пробуємо по user ID
+      // Якщо не знайшли по profile_id, пробуємо по повному user ID
       const { data, error } = await supabase
         .from('profiles')
         .select('*')

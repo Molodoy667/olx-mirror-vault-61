@@ -76,7 +76,8 @@ export async function getOrCreateSeoUrl(listingId: string, title: string): Promi
 
     // Если SEO URL не существует, создаем новый
     const slug = generateSlug(title);
-    const seoId = generateRandomId();
+    // Используем первые 8 символов listing ID как seoId
+    const seoId = listingId.replace(/-/g, '').substring(0, 8).toUpperCase();
     const fullUrl = `/${slug}-${seoId}`;
 
     // Сохраняем в базу данных
@@ -163,7 +164,7 @@ export function extractListingIdFromUrl(url: string): string | null {
  * Проверяет, является ли URL SEO-friendly
  */
 export function isSeoUrl(url: string): boolean {
-  return /^\/[a-z0-9-]+-[a-zA-Z0-9]{6}$/.test(url);
+  return /^\/[a-z0-9-]+-[A-Z0-9]{8}$/.test(url);
 }
 
 /**

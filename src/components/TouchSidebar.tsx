@@ -68,7 +68,15 @@ export function TouchSidebar({ isOpen, onClose, onToggle }: TouchSidebarProps) {
 
   const getProfileUrl = () => {
     const profileId = getProfileId();
-    return profileId ? `/${profileId}` : `/profile/${user?.id}`;
+    if (profileId) {
+      return `/${profileId}`;
+    }
+    // Тимчасовий fallback - використовуємо перші 6 цифр з user.id
+    if (user?.id) {
+      const tempId = user.id.replace(/-/g, '').substring(0, 6);
+      return `/${tempId}`;
+    }
+    return `/profile/${user?.id}`;
   };
 
   const getDisplayName = () => {
@@ -302,7 +310,12 @@ export function TouchSidebar({ isOpen, onClose, onToggle }: TouchSidebarProps) {
                     {getDisplayName()}
                   </p>
                   <p className="text-sm text-muted-foreground truncate">
-                    {getProfileId() ? `ID: ${getProfileId()}` : user.email}
+                    {getProfileId() 
+                      ? `ID: ${getProfileId()}` 
+                      : user?.id 
+                        ? `ID: ${user.id.replace(/-/g, '').substring(0, 6)}`
+                        : user.email
+                    }
                   </p>
                 </div>
               </>
