@@ -39,6 +39,78 @@ export default function Auth() {
   const isValidEmail = (email: string) => /\S+@\S+\.\S+/.test(email);
   const isValidUsername = (username: string) => /^[a-zA-Z0-9_]{3,20}$/.test(username);
 
+  // Функція для покращеної обробки помилок
+  const getErrorMessage = (error: any, isLoginForm: boolean) => {
+    const errorMessage = error.message?.toLowerCase() || '';
+    
+    // Помилки входу
+    if (errorMessage.includes('invalid_credentials') || 
+        errorMessage.includes('invalid login credentials')) {
+      return "Невірний логін або пароль";
+    }
+    
+    if (errorMessage.includes('email not confirmed')) {
+      return "Email не підтверджено. Перевірте пошту";
+    }
+    
+    if (errorMessage.includes('user not found') || 
+        errorMessage.includes('користувача з таким username не знайдено')) {
+      return "Користувача з таким логіном не знайдено";
+    }
+    
+    // Помилки реєстрації
+    if (errorMessage.includes('email already registered') || 
+        errorMessage.includes('user already registered') ||
+        errorMessage.includes('user_already_exists')) {
+      return "Користувач з таким email вже існує";
+    }
+    
+    if (errorMessage.includes('signup_disabled')) {
+      return "Реєстрація тимчасово недоступна";
+    }
+    
+    if (errorMessage.includes('weak_password') || 
+        (errorMessage.includes('password') && errorMessage.includes('short'))) {
+      return "Пароль занадто простий або короткий";
+    }
+    
+    // Помилки валідації
+    if (errorMessage.includes('email') && errorMessage.includes('invalid')) {
+      return "Невірний формат email адреси";
+    }
+    
+    if (errorMessage.includes('invalid_email')) {
+      return "Введіть дійсну email адресу";
+    }
+    
+    // Мережеві помилки
+    if (errorMessage.includes('network') || 
+        errorMessage.includes('connection') ||
+        errorMessage.includes('fetch')) {
+      return "Проблема з підключенням. Перевірте інтернет";
+    }
+    
+    if (errorMessage.includes('rate limit') || 
+        errorMessage.includes('too_many_requests')) {
+      return "Забагато спроб. Спробуйте через хвилину";
+    }
+    
+    if (errorMessage.includes('timeout')) {
+      return "Час очікування вичерпано. Спробуйте ще раз";
+    }
+    
+    // Серверні помилки
+    if (errorMessage.includes('internal_server_error') || 
+        errorMessage.includes('500')) {
+      return "Технічні проблеми сервера. Спробуйте пізніше";
+    }
+    
+    // Стандартні повідомлення
+    return isLoginForm 
+      ? "Невірний логін або пароль" 
+      : "Помилка реєстрації. Перевірте дані та спробуйте знову";
+  };
+
   // Показуємо loader поки перевіряємо авторизацію
   if (authLoading) {
     return (
@@ -59,16 +131,21 @@ export default function Auth() {
     // Валідація логіна (email або username)
     if (!formData.login) {
       newErrors.login = "Логін обов'язковий";
-    } else if (!isValidEmail(formData.login) && !isValidUsername(formData.login)) {
+    } else if (!isLogin && !isValidEmail(formData.login) && !isValidUsername(formData.login)) {
+      // Строга валідація тільки для реєстрації
       newErrors.login = "Введіть валідний email або username (3-20 символів, a-z, 0-9, _)";
+    } else if (isLogin && formData.login.length < 2) {
+      // М'яка валідація для входу
+      newErrors.login = "Логін занадто короткий";
     }
 
     // Валідація пароля
     if (!formData.password) {
       newErrors.password = "Пароль обов'язковий";
-    } else if (formData.password.length < 8) {
+    } else if (!isLogin && formData.password.length < 8) {
+      // Складна валідація тільки для реєстрації
       newErrors.password = "Пароль повинен містити мінімум 8 символів";
-    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
+    } else if (!isLogin && !/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
       newErrors.password = "Пароль повинен містити великі та малі літери та цифри";
     }
 
@@ -159,6 +236,11 @@ export default function Auth() {
           .single();
 
         if (existingUser) {
+          toast({
+            title: "Помилка реєстрації",
+            description: "Користувач з таким username вже існує. Оберіть інший",
+            variant: "destructive",
+          });
           setErrors({ username: 'Цей username вже зайнятий' });
           setLoading(false);
           return;
@@ -166,6 +248,11 @@ export default function Auth() {
 
         // Реєстрація з email (login поле має бути email для реєстрації)
         if (!isValidEmail(formData.login)) {
+          toast({
+            title: "Помилка реєстрації",
+            description: "Для реєстрації потрібен валідний email адрес",
+            variant: "destructive",
+          });
           setErrors({ login: 'Для реєстрації потрібен валідний email' });
           setLoading(false);
           return;
@@ -222,11 +309,18 @@ export default function Auth() {
         }
       }
     } catch (error: any) {
+      const errorMessage = getErrorMessage(error, isLogin);
+      
       toast({
-        title: "Помилка",
-        description: error.message || "Щось пішло не так",
+        title: isLogin ? "Помилка входу" : "Помилка реєстрації",
+        description: errorMessage,
         variant: "destructive",
       });
+      
+      // Очищаємо пароль при помилці входу для безпеки
+      if (isLogin) {
+        setFormData({ ...formData, password: '' });
+      }
     } finally {
       setLoading(false);
     }
