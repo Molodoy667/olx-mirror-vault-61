@@ -91,7 +91,7 @@ export default function EditProfile() {
         .single();
       
       const profileUrl = profileData?.profile_id 
-        ? `/profile/${profileData.profile_id}` 
+        ? `/${profileData.profile_id}` 
         : `/profile/${user.id}`;
       
       navigate(profileUrl);
@@ -198,7 +198,14 @@ export default function EditProfile() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate(`/profile/${user.id}`)}
+                onClick={async () => {
+                  try {
+                    const profileUrl = await import('@/lib/profileUtils').then(m => m.getProfileUrlForUser(user.id));
+                    navigate(profileUrl);
+                  } catch (error) {
+                    navigate(`/profile/${user.id}`);
+                  }
+                }}
                 disabled={loading}
                 className="w-full sm:w-auto order-2 sm:order-1"
               >

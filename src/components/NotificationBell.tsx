@@ -185,7 +185,7 @@ export function NotificationBell() {
     }
   };
 
-  const handleNotificationClick = (notification: Notification) => {
+  const handleNotificationClick = async (notification: Notification) => {
     markAsRead(notification.id);
     
     // Навігація залежно від типу сповіщення
@@ -201,7 +201,17 @@ export function NotificationBell() {
       case 'listing_views':
       case 'price_offer':
         if (notification.data?.listing_id) {
-          navigate(`/listing/${notification.data.listing_id}`);
+          try {
+            const { getSeoUrl } = await import('@/lib/seo');
+            const seoUrl = await getSeoUrl(notification.data.listing_id);
+            if (seoUrl) {
+              navigate(seoUrl);
+            } else {
+              navigate(`/listing/${notification.data.listing_id}`);
+            }
+          } catch (error) {
+            navigate(`/listing/${notification.data.listing_id}`);
+          }
         }
         break;
       default:

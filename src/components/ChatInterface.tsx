@@ -141,14 +141,28 @@ export function ChatInterface({ conversationId, otherUserId, listingId }: ChatIn
             src={otherUserProfile?.avatar_url}
             username={otherUserProfile?.username || otherUserProfile?.full_name}
             size="md"
-            onClick={() => navigate(`/profile/${otherUserId}`)}
+            onClick={async () => {
+              try {
+                const profileUrl = await import('@/lib/profileUtils').then(m => m.getProfileUrlForUser(otherUserId));
+                navigate(profileUrl);
+              } catch (error) {
+                navigate(`/profile/${otherUserId}`);
+              }
+            }}
           />
           {/* Online indicator */}
           {getOnlineStatus(otherUserProfile?.last_seen).online && (
             <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-background rounded-full"></div>
           )}
         </div>
-        <div className="flex-1 cursor-pointer" onClick={() => navigate(`/profile/${otherUserId}`)}>
+        <div className="flex-1 cursor-pointer" onClick={async () => {
+          try {
+            const profileUrl = await import('@/lib/profileUtils').then(m => m.getProfileUrlForUser(otherUserId));
+            navigate(profileUrl);
+          } catch (error) {
+            navigate(`/profile/${otherUserId}`);
+          }
+        }}>
           <h3 className="font-semibold hover:text-primary transition-colors">
             {otherUserProfile?.full_name || 'Користувач'}
           </h3>

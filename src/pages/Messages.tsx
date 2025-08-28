@@ -330,13 +330,13 @@ export default function Messages() {
                       src={chats.find(c => c.user_id === selectedChat)?.avatar_url}
                       username={chats.find(c => c.user_id === selectedChat)?.user_name}
                       size="md"
-                      onClick={() => {
-                        const currentChat = chats.find(c => c.user_id === selectedChat);
-                        const username = currentChat?.username;
-                        const profilePath = username 
-                          ? `/profile/@${username}` 
-                          : `/profile/${selectedChat}`;
-                        navigate(profilePath);
+                      onClick={async () => {
+                        try {
+                          const profileUrl = await import('@/lib/profileUtils').then(m => m.getProfileUrlForUser(selectedChat));
+                          navigate(profileUrl);
+                        } catch (error) {
+                          navigate(`/profile/${selectedChat}`);
+                        }
                       }}
                     />
                     {/* Online indicator in header */}
@@ -349,13 +349,13 @@ export default function Messages() {
                     })()}
                   </div>
                   
-                  <div className="flex-1 cursor-pointer" onClick={() => {
-                    const currentChat = chats.find(c => c.user_id === selectedChat);
-                    const username = currentChat?.username;
-                    const profilePath = username 
-                      ? `/profile/@${username}` 
-                      : `/profile/${selectedChat}`;
-                    navigate(profilePath);
+                  <div className="flex-1 cursor-pointer" onClick={async () => {
+                    try {
+                      const profileUrl = await import('@/lib/profileUtils').then(m => m.getProfileUrlForUser(selectedChat));
+                      navigate(profileUrl);
+                    } catch (error) {
+                      navigate(`/profile/${selectedChat}`);
+                    }
                   }}>
                     <p className="font-medium hover:text-primary transition-colors">
                       {chats.find(c => c.user_id === selectedChat)?.user_name || 'Користувач'}
@@ -385,7 +385,19 @@ export default function Messages() {
                         {message.listings && (
                           <div className="flex justify-center mb-4">
                             <div 
-                              onClick={() => navigate(`/listing/${message.listings.id}`)}
+                              onClick={async () => {
+                                try {
+                                  const { getSeoUrl } = await import('@/lib/seo');
+                                  const seoUrl = await getSeoUrl(message.listings.id);
+                                  if (seoUrl) {
+                                    navigate(seoUrl);
+                                  } else {
+                                    navigate(`/listing/${message.listings.id}`);
+                                  }
+                                } catch (error) {
+                                  navigate(`/listing/${message.listings.id}`);
+                                }
+                              }}
                               className="bg-muted/50 px-4 py-2 rounded-lg text-sm text-muted-foreground cursor-pointer hover:bg-muted"
                             >
                               Оголошення: {message.listings.title}

@@ -165,7 +165,15 @@ export function SellerCard({ userId, onContact }: SellerCardProps) {
         </Button>
         
         <Button 
-          onClick={() => navigate(`/profile/${userId}`)}
+          onClick={async () => {
+            try {
+              const { getProfileUrlForUser } = await import('@/lib/profileUtils');
+              const profileUrl = await getProfileUrlForUser(userId);
+              navigate(profileUrl);
+            } catch (error) {
+              navigate(`/profile/${userId}`);
+            }
+          }}
           variant="outline" 
           className="w-full"
         >

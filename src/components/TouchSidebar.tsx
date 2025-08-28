@@ -68,7 +68,7 @@ export function TouchSidebar({ isOpen, onClose, onToggle }: TouchSidebarProps) {
 
   const getProfileUrl = () => {
     const profileId = getProfileId();
-    return profileId ? `/profile/${profileId}` : `/profile/${user?.id}`;
+    return profileId ? `/${profileId}` : `/profile/${user?.id}`;
   };
 
   const getDisplayName = () => {

@@ -238,7 +238,15 @@ export default function AdminUsers() {
                         <Button
                           variant="outline"
                           size="icon"
-                          onClick={() => navigate(`/profile/${user.id}`)}
+                          onClick={async () => {
+                            try {
+                              const { getProfileUrlForUser } = await import('@/lib/profileUtils');
+                              const profileUrl = await getProfileUrlForUser(user.id);
+                              navigate(profileUrl);
+                            } catch (error) {
+                              navigate(`/profile/${user.id}`);
+                            }
+                          }}
                           className="w-8 h-8"
                         >
                           <Edit className="w-3 h-3" />

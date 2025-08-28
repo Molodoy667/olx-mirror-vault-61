@@ -10,6 +10,7 @@ import { UserBottomPanel } from "@/components/UserBottomPanel";
 import { AdminRoute } from "@/components/AdminRoute";
 import { Layout } from "@/components/Layout";
 import { lazyWithRetry } from "@/components/LazyRetry";
+import { DynamicRoute } from "@/components/DynamicRoute";
 
 // Lazy load all pages for better performance
 const Home = lazy(() => import("./pages/Home"));
@@ -83,7 +84,9 @@ const App = () => (
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/search" element={<Search />} />
                 <Route path="/create" element={<CreateListing />} />
+                {/* Legacy profile route for backwards compatibility */}
                 <Route path="/profile/:id" element={<Profile />} />
+                
                 <Route path="/edit-profile" element={<EditProfile />} />
                 <Route path="/edit/:id" element={<EditListing />} />
                 <Route path="/category/:slug" element={<CategoryPage />} />
@@ -96,7 +99,13 @@ const App = () => (
                 <Route path="/chat" element={<Chat />} />
                 <Route path="/novado-pro" element={<NovadoPro />} />
                 <Route path="/notifications" element={<Notifications />} />
+                
+                {/* Legacy listing route for backwards compatibility */}
                 <Route path="/listing/:id" element={<ListingDetail />} />
+                
+                {/* Dynamic routes - must be last */}
+                {/* Universal route for profiles (123456) and listings (slug-seoId) */}
+                <Route path="/:dynamicParam" element={<DynamicRoute />} />
                 
                 {/* Admin Routes */}
                 <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />

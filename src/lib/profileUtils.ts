@@ -90,5 +90,15 @@ export const getUserIdByProfileId = async (profileId: string): Promise<string | 
 // Форматування profile_id для URL
 export const formatProfileUrl = (profileId: string | null): string => {
   if (!profileId) return '/profile';
-  return `/profile/${profileId}`;
+  return `/${profileId}`;  // Формат: /123456
+};
+
+// Отримати URL профілю для користувача
+export const getProfileUrlForUser = async (userId: string): Promise<string> => {
+  const profileId = await getProfileIdByUserId(userId);
+  if (profileId) {
+    return `/${profileId}`;  // Формат: /123456
+  }
+  // Fallback на старий формат якщо profile_id не знайдено
+  return `/profile/${userId}`;
 };
