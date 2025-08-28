@@ -18,7 +18,6 @@ export default function EditProfile() {
   const [avatarUrl, setAvatarUrl] = useState('');
   const [formData, setFormData] = useState({
     full_name: '',
-    username: '',
     location: '',
     phone: '',
   });
@@ -40,7 +39,6 @@ export default function EditProfile() {
       if (data) {
         setFormData({
           full_name: data.full_name || '',
-          username: data.username || '',
           location: data.location || '',
           phone: data.phone || '',
         });
@@ -85,7 +83,18 @@ export default function EditProfile() {
         description: "Ваші дані успішно збережено",
       });
 
-      navigate(`/profile/${user.id}`);
+      // Спробуємо отримати profile_id для навігації
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('profile_id')
+        .eq('id', user.id)
+        .single();
+      
+      const profileUrl = profileData?.profile_id 
+        ? `/profile/${profileData.profile_id}` 
+        : `/profile/${user.id}`;
+      
+      navigate(profileUrl);
     } catch (error: any) {
       toast({
         title: "Помилка",
@@ -152,16 +161,7 @@ export default function EditProfile() {
               />
             </div>
 
-            {/* Username */}
-            <div>
-              <Label htmlFor="username">Ім'я користувача</Label>
-              <Input
-                id="username"
-                value={formData.username}
-                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                placeholder="@username"
-              />
-            </div>
+
 
             {/* Location */}
             <div>

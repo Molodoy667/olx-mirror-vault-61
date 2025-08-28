@@ -15,31 +15,38 @@ import { BusinessUpgradeDialog } from '@/components/BusinessUpgradeDialog';
 import { VIPPromotionDialog } from '@/components/VIPPromotionDialog';
 
 export default function Profile() {
-  const { id, username } = useParams();
+  const { id } = useParams(); // тепер тільки profile_id або user_id
   const { user } = useAuth();
   const navigate = useNavigate();
   const { isAdmin } = useAdmin();
 
-  // Визначаємо чи це username чи ID
-  const isUsernameRoute = Boolean(username);
-  const profileIdentifier = isUsernameRoute ? username : id;
-
   const { data: profile } = useQuery({
-    queryKey: ['profile', profileIdentifier, isUsernameRoute],
+    queryKey: ['profile', id],
     queryFn: async () => {
-      let query = supabase.from('profiles').select('*');
-      
-      if (isUsernameRoute) {
-        query = query.eq('username', profileIdentifier);
-      } else {
-        query = query.eq('id', profileIdentifier);
+      // Спочатку пробуємо знайти по profile_id (6 цифр)
+      if (id && id.length === 6 && /^\d+$/.test(id)) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('profile_id', id)
+          .single();
+        
+        if (!error && data) {
+          return data;
+        }
       }
       
-      const { data, error } = await query.single();
+      // Якщо не знайшли по profile_id, пробуємо по user ID
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', id)
+        .single();
       
       if (error) throw error;
       return data;
     },
+    enabled: !!id
   });
 
   const isOwnProfile = user?.id === profile?.id;

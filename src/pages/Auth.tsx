@@ -19,10 +19,9 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
-    login: '', // може бути email або username
+    login: '', // тепер тільки email
     password: '',
-    fullName: '',
-    username: ''
+    fullName: ''
   });
   const [agreements, setAgreements] = useState({
     terms: false,
@@ -129,15 +128,11 @@ export default function Auth() {
   const validateForm = () => {
     const newErrors: {[key: string]: string} = {};
 
-    // Валідація логіна (email або username)
+    // Валідація email
     if (!formData.login) {
-      newErrors.login = "Логін обов'язковий";
-    } else if (!isLogin && !isValidEmail(formData.login) && !isValidUsername(formData.login)) {
-      // Строга валідація тільки для реєстрації
-      newErrors.login = "Введіть валідний email або username (3-20 символів, a-z, 0-9, _)";
-    } else if (isLogin && formData.login.length < 2) {
-      // М'яка валідація для входу
-      newErrors.login = "Логін занадто короткий";
+      newErrors.login = "Email обов'язковий";
+    } else if (!isValidEmail(formData.login)) {
+      newErrors.login = "Введіть валідний email адрес";
     }
 
     // Валідація пароля
@@ -158,12 +153,7 @@ export default function Auth() {
         newErrors.fullName = "Повне ім'я повинно містити мінімум 2 символи";
       }
 
-      // Валідація username
-      if (!formData.username) {
-        newErrors.username = "Username обов'язковий";
-      } else if (!isValidUsername(formData.username)) {
-        newErrors.username = "Username: 3-20 символів, лише a-z, 0-9, _";
-      }
+
 
       // Валідація згоди з умовами
       if (!agreements.terms) {
@@ -187,33 +177,11 @@ export default function Auth() {
 
     try {
       if (isLogin) {
-        // Спробуємо увійти як email, якщо не вийде - як username
-        let loginData;
-        
-        if (isValidEmail(formData.login)) {
-          // Логін як email
-          loginData = await supabase.auth.signInWithPassword({
-            email: formData.login,
-            password: formData.password,
-          });
-        } else {
-          // Логін як username - потрібно знайти email по username
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('email')
-            .eq('username', formData.login)
-            .single();
-          
-          if (!profile || !profile.email) {
-            throw new Error('Користувача з таким username не знайдено');
-          }
-          
-          // Логін через email знайдений по username
-          loginData = await supabase.auth.signInWithPassword({
-            email: profile.email,
-            password: formData.password,
-          });
-        }
+        // Логін тільки через email
+        const loginData = await supabase.auth.signInWithPassword({
+          email: formData.login,
+          password: formData.password,
+        });
 
         if (loginData.error) throw loginData.error;
         
@@ -232,35 +200,9 @@ export default function Auth() {
           navigate('/');
         }
       } else {
-        // Перевірка унікальності username
-        const { data: existingUser } = await supabase
-          .from('profiles')
-          .select('username')
-          .eq('username', formData.username)
-          .single();
 
-        if (existingUser) {
-          toast({
-            title: "Помилка реєстрації",
-            description: "Користувач з таким username вже існує. Оберіть інший",
-            variant: "destructive",
-          });
-          setErrors({ username: 'Цей username вже зайнятий' });
-          setLoading(false);
-          return;
-        }
 
-        // Реєстрація з email (login поле має бути email для реєстрації)
-        if (!isValidEmail(formData.login)) {
-          toast({
-            title: "Помилка реєстрації",
-            description: "Для реєстрації потрібен валідний email адрес",
-            variant: "destructive",
-          });
-          setErrors({ login: 'Для реєстрації потрібен валідний email' });
-          setLoading(false);
-          return;
-        }
+
 
         const { data, error } = await supabase.auth.signUp({
           email: formData.login,
@@ -268,8 +210,7 @@ export default function Auth() {
           options: {
             emailRedirectTo: `${window.location.origin}/welcome`,
             data: {
-              full_name: formData.fullName,
-              username: formData.username
+              full_name: formData.fullName
             }
           }
         });
@@ -277,13 +218,12 @@ export default function Auth() {
         if (error) throw error;
 
         if (data.user) {
-          // Створення профілю
+          // Створення профілю з автоматичним profile_id
           const { error: profileError } = await supabase
             .from('profiles')
             .insert({
               id: data.user.id,
               full_name: formData.fullName,
-              username: formData.username,
               email: formData.login,
             });
 
@@ -370,21 +310,17 @@ export default function Auth() {
 
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Логін (email або username) */}
+              {/* Email */}
               <div className="space-y-2">
                 <Label htmlFor="login" className="text-sm font-medium">
-                  {isLogin ? 'Email або Username' : 'Email'}
+                  Email
                 </Label>
                 <div className="relative">
-                  {isLogin ? (
-                    <AtSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  ) : (
-                    <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  )}
+                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="login"
-                    type="text"
-                    placeholder={isLogin ? "email@example.com або username" : "Введіть ваш email"}
+                    type="email"
+                    placeholder="Введіть ваш email"
                     value={formData.login}
                     onChange={(e) => handleInputChange('login', e.target.value)}
                     className={cn(
@@ -424,34 +360,7 @@ export default function Auth() {
                     )}
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="username" className="text-sm font-medium">
-                      Username
-                    </Label>
-                    <div className="relative">
-                      <AtSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="username"
-                        type="text"
-                        placeholder="@username"
-                        value={formData.username}
-                        onChange={(e) => {
-                          let value = e.target.value;
-                          if (value && !value.startsWith('@')) {
-                            value = '@' + value;
-                          }
-                          handleInputChange('username', value.slice(1)); // Зберігаємо без @
-                        }}
-                        className={cn(
-                          "pl-10",
-                          errors.username && "border-red-500 focus-visible:ring-red-500"
-                        )}
-                      />
-                    </div>
-                    {errors.username && (
-                      <p className="text-sm text-red-500">{errors.username}</p>
-                    )}
-                  </div>
+
                 </div>
               )}
 

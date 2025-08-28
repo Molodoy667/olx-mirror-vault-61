@@ -62,28 +62,24 @@ export function TouchSidebar({ isOpen, onClose, onToggle }: TouchSidebarProps) {
   });
 
   // Допоміжні функції для отримання даних користувача
-  const getUsernameForDisplay = () => {
-    const username = profile?.username || user?.user_metadata?.username;
-    if (!username) return null;
-    // Видаляємо @ якщо він є на початку
-    return username.startsWith('@') ? username.slice(1) : username;
+  const getProfileId = () => {
+    return profile?.profile_id || null;
   };
 
-  const getUsernameForNavigation = () => {
-    const username = getUsernameForDisplay();
-    return username ? `@${username}` : null;
+  const getProfileUrl = () => {
+    const profileId = getProfileId();
+    return profileId ? `/profile/${profileId}` : `/profile/${user?.id}`;
   };
 
   const getDisplayName = () => {
     return profile?.full_name || 
            user?.user_metadata?.full_name || 
-           getUsernameForDisplay() || 
            user?.email?.split('@')[0] || 
            'Користувач';
   };
 
   const getAvatarUsername = () => {
-    return getUsernameForDisplay() || user?.email?.split('@')[0];
+    return profile?.full_name?.charAt(0) || user?.email?.split('@')[0];
   };
 
   // Handle touch events for swipe gestures and scrolling
@@ -208,8 +204,7 @@ export function TouchSidebar({ isOpen, onClose, onToggle }: TouchSidebarProps) {
       icon: User, 
       label: 'Мій профіль', 
       action: () => {
-        const usernameNav = getUsernameForNavigation();
-        handleNavigation(usernameNav ? `/profile/${usernameNav}` : `/profile/${user?.id}`);
+        handleNavigation(getProfileUrl());
       },
       color: 'text-blue-500'
     },
@@ -307,7 +302,7 @@ export function TouchSidebar({ isOpen, onClose, onToggle }: TouchSidebarProps) {
                     {getDisplayName()}
                   </p>
                   <p className="text-sm text-muted-foreground truncate">
-                    {getUsernameForDisplay() ? `@${getUsernameForDisplay()}` : user.email}
+                    {getProfileId() ? `ID: ${getProfileId()}` : user.email}
                   </p>
                 </div>
               </>
