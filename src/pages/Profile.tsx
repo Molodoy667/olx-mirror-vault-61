@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
-import { User, MapPin, Calendar, Package, Heart, Settings, Shield } from 'lucide-react';
+import { User, MapPin, Calendar, Package, Heart, Settings, Shield, BarChart3, Bell, Key, Users, MessageSquare, Star, ArrowLeft, Home } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { BusinessUpgradeDialog } from '@/components/BusinessUpgradeDialog';
 import { VIPPromotionDialog } from '@/components/VIPPromotionDialog';
@@ -20,7 +20,7 @@ export default function Profile() {
   const navigate = useNavigate();
   const { isAdmin } = useAdmin();
 
-  const { data: profile } = useQuery({
+  const { data: profile, isLoading: profileLoading, error: profileError } = useQuery({
     queryKey: ['profile', id],
     queryFn: async () => {
       console.log('🔍 Profile page analyzing ID:', id);
@@ -74,7 +74,8 @@ export default function Profile() {
       console.log('✅ Found profile by full ID');
       return data;
     },
-    enabled: !!id
+    enabled: !!id,
+    retry: false
   });
 
   const isOwnProfile = user?.id === profile?.id;
@@ -125,6 +126,86 @@ export default function Profile() {
     enabled: isOwnProfile,
   });
 
+  // Loading state
+  if (profileLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-4xl mx-auto">
+            {/* Profile Header Skeleton */}
+            <div className="bg-card rounded-lg p-4 sm:p-6 mb-6 animate-pulse">
+              <div className="flex items-start gap-4 sm:gap-6">
+                <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-full bg-muted flex-shrink-0"></div>
+                <div className="flex-1 space-y-3">
+                  <div className="h-6 bg-muted rounded w-1/3"></div>
+                  <div className="h-4 bg-muted rounded w-1/2"></div>
+                  <div className="h-4 bg-muted rounded w-2/3"></div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Content Skeleton */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="bg-card rounded-lg p-4 animate-pulse">
+                  <div className="h-32 bg-muted rounded mb-4"></div>
+                  <div className="h-4 bg-muted rounded mb-2"></div>
+                  <div className="h-4 bg-muted rounded w-2/3"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Error state - profile not found
+  if (profileError || !profile) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-md mx-auto text-center">
+            <div className="bg-card rounded-lg p-8 space-y-6">
+              <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mx-auto">
+                <User className="w-10 h-10 text-muted-foreground" />
+              </div>
+              
+              <div className="space-y-2">
+                <h1 className="text-2xl font-bold">Профіль не знайдено</h1>
+                <p className="text-muted-foreground">
+                  Користувач з ID <code className="bg-muted px-2 py-1 rounded font-mono text-sm">{id}</code> не існує або був видалений
+                </p>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button 
+                  onClick={() => navigate(-1)}
+                  variant="outline" 
+                  className="flex-1"
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Назад
+                </Button>
+                <Button 
+                  onClick={() => navigate('/')}
+                  className="flex-1"
+                >
+                  <Home className="w-4 h-4 mr-2" />
+                  На головну
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -171,33 +252,113 @@ export default function Profile() {
                 </div>
                 
                 {isOwnProfile && (
-                  <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                    {isAdmin && (
+                  <div className="flex flex-col gap-3 w-full sm:w-auto">
+                    {/* Primary Action Buttons */}
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      {isAdmin && (
+                        <Button 
+                          variant="default" 
+                          size="sm"
+                          onClick={() => navigate('/admin')}
+                          className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 w-full sm:w-auto"
+                        >
+                          <Shield className="w-4 h-4 mr-2 flex-shrink-0" />
+                          <span className="truncate">Адмін панель</span>
+                        </Button>
+                      )}
                       <Button 
                         variant="default" 
                         size="sm"
-                        onClick={() => navigate('/admin')}
+                        onClick={() => navigate('/edit-profile')}
                         className="bg-gradient-to-r from-primary to-primary-dark w-full sm:w-auto"
                       >
-                        <Shield className="w-4 h-4 mr-2 flex-shrink-0" />
-                        <span className="truncate">Адмін панель</span>
+                        <Settings className="w-4 h-4 mr-2 flex-shrink-0" />
+                        <span className="truncate">Налаштування</span>
                       </Button>
-                    )}
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => navigate('/edit-profile')}
-                      className="w-full sm:w-auto"
-                    >
-                      <Settings className="w-4 h-4 mr-2 flex-shrink-0" />
-                      <span className="truncate">Редагувати</span>
-                    </Button>
+                    </div>
+                    
+                    {/* Secondary Action Buttons */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => navigate('/my-listings')}
+                        className="w-full"
+                      >
+                        <Package className="w-4 h-4 mr-1 flex-shrink-0" />
+                        <span className="truncate text-xs">Мої оголошення</span>
+                      </Button>
+                      
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => navigate('/messages')}
+                        className="w-full"
+                      >
+                        <MessageSquare className="w-4 h-4 mr-1 flex-shrink-0" />
+                        <span className="truncate text-xs">Повідомлення</span>
+                      </Button>
+                      
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => navigate('/notifications')}
+                        className="w-full"
+                      >
+                        <Bell className="w-4 h-4 mr-1 flex-shrink-0" />
+                        <span className="truncate text-xs">Сповіщення</span>
+                      </Button>
+                      
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => navigate('/favorites')}
+                        className="w-full"
+                      >
+                        <Heart className="w-4 h-4 mr-1 flex-shrink-0" />
+                        <span className="truncate text-xs">Обране</span>
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
             </div>
           </div>
           
+          {/* Profile Stats for Own Profile */}
+          {isOwnProfile && (
+            <div className="bg-card rounded-lg p-4 sm:p-6 mt-6">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-primary" />
+                Статистика профілю
+              </h3>
+              
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="text-center p-3 bg-background rounded-lg border">
+                  <div className="text-2xl font-bold text-primary">{listings?.length || 0}</div>
+                  <div className="text-sm text-muted-foreground">Активних оголошень</div>
+                </div>
+                
+                <div className="text-center p-3 bg-background rounded-lg border">
+                  <div className="text-2xl font-bold text-green-600">{favorites?.length || 0}</div>
+                  <div className="text-sm text-muted-foreground">У обраному</div>
+                </div>
+                
+                <div className="text-center p-3 bg-background rounded-lg border">
+                  <div className="text-2xl font-bold text-blue-600">{profile?.profile_id || '---'}</div>
+                  <div className="text-sm text-muted-foreground">ID профілю</div>
+                </div>
+                
+                <div className="text-center p-3 bg-background rounded-lg border">
+                  <div className="text-2xl font-bold text-purple-600">
+                    {profile?.created_at && formatDistanceToNow(new Date(profile.created_at), { addSuffix: false })}
+                  </div>
+                  <div className="text-sm text-muted-foreground">На платформі</div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Business Upgrade Section */}
           {isOwnProfile && (
             <div className="mt-6">
