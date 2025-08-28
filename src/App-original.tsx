@@ -46,6 +46,7 @@ const Chat = lazy(() => import("./pages/Chat"));
 const NovadoPro = lazy(() => import("./pages/NovadoPro"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const Notifications = lazy(() => import("./pages/Notifications"));
 
 // Loading fallback component
 const PageFallback = () => (
@@ -95,6 +96,7 @@ const App = () => (
                 <Route path="/saved-searches" element={<SavedSearches />} />
                 <Route path="/chat" element={<Chat />} />
                 <Route path="/novado-pro" element={<NovadoPro />} />
+                <Route path="/notifications" element={<Notifications />} />
                 <Route path="/listing/:id" element={<ListingDetail />} />
                 
                 {/* Admin Routes */}

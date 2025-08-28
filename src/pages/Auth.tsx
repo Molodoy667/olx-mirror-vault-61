@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { createLoginNotification, createRegistrationNotification } from '@/lib/notificationHelpers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -221,6 +222,9 @@ export default function Auth() {
           localStorage.setItem('novado_session', JSON.stringify(loginData.data.session));
           document.cookie = `novado_user=${loginData.data.user.id}; path=/; max-age=${7 * 24 * 60 * 60}; secure; samesite=strict`;
           
+          // Створення сповіщення про вхід
+          createLoginNotification(loginData.data.user.id);
+          
           toast({
             title: "Успішно!",
             description: "Ласкаво просимо назад!",
@@ -297,6 +301,9 @@ export default function Auth() {
             // Збереження сесії
             localStorage.setItem('novado_session', JSON.stringify(loginData.data.session));
             document.cookie = `novado_user=${loginData.data.user.id}; path=/; max-age=${7 * 24 * 60 * 60}; secure; samesite=strict`;
+            
+            // Створення сповіщення про реєстрацію
+            createRegistrationNotification(loginData.data.user.id);
             
             toast({
               title: "Реєстрація успішна! 🎉",

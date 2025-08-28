@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Bell, X, Eye, MessageCircle, Heart, Star } from "lucide-react";
+import { Bell, X, Eye, MessageCircle, Heart, Star, User, ExternalLink, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -9,23 +9,26 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 import { uk } from "date-fns/locale";
 
 interface Notification {
   id: string;
-  type: "message" | "favorite" | "view" | "review";
+  user_id: string;
+  type: string;
   title: string;
-  content: string;
-  created_at: string;
+  message?: string;
+  data?: any;
   is_read: boolean;
-  related_listing_id?: string;
-  related_user_id?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export function NotificationBell() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -37,23 +40,24 @@ export function NotificationBell() {
     
     // Subscribe to real-time notifications
     const channel = supabase
-      .channel('notifications')
+      .channel('user-notifications')
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'messages',
-          filter: `receiver_id=eq.${user.id}`
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`
         },
         () => loadNotifications()
       )
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: 'UPDATE',
           schema: 'public',
-          table: 'favorites'
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`
         },
         () => loadNotifications()
       )
@@ -69,64 +73,96 @@ export function NotificationBell() {
     
     setLoading(true);
     try {
-      // Создаем фейковые уведомления на основе реальных данных
-      const mockNotifications: Notification[] = [
-        {
-          id: "1",
-          type: "message",
-          title: "Нове повідомлення",
-          content: "Ви отримали нове повідомлення від користувача",
-          created_at: new Date().toISOString(),
-          is_read: false
-        },
-        {
-          id: "2", 
-          type: "favorite",
-          title: "Додано до обраних",
-          content: "Ваше оголошення було додано до обраних",
-          created_at: new Date(Date.now() - 3600000).toISOString(),
-          is_read: false
-        },
-        {
-          id: "3",
-          type: "view",
-          title: "Нові перегляди",
-          content: "Ваше оголошення переглянули 5 разів сьогодні",
-          created_at: new Date(Date.now() - 7200000).toISOString(),
-          is_read: true
-        }
-      ];
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(50);
 
-      setNotifications(mockNotifications);
-      setUnreadCount(mockNotifications.filter(n => !n.is_read).length);
+      if (error) throw error;
+
+      setNotifications(data || []);
+      setUnreadCount((data || []).filter(n => !n.is_read).length);
     } catch (error) {
       console.error('Error loading notifications:', error);
+      setNotifications([]);
+      setUnreadCount(0);
     } finally {
       setLoading(false);
     }
   };
 
-  const markAsRead = (notificationId: string) => {
-    setNotifications(prev => 
-      prev.map(n => 
-        n.id === notificationId ? { ...n, is_read: true } : n
-      )
-    );
-    setUnreadCount(prev => Math.max(0, prev - 1));
+  const markAsRead = async (notificationId: string) => {
+    try {
+      const { error } = await supabase.rpc('mark_notifications_as_read', {
+        notification_ids: [notificationId]
+      });
+
+      if (error) throw error;
+
+      setNotifications(prev => 
+        prev.map(n => 
+          n.id === notificationId ? { ...n, is_read: true } : n
+        )
+      );
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
-    setUnreadCount(0);
+  const markAllAsRead = async () => {
+    try {
+      const unreadIds = notifications.filter(n => !n.is_read).map(n => n.id);
+      if (unreadIds.length === 0) return;
+
+      const { error } = await supabase.rpc('mark_notifications_as_read', {
+        notification_ids: unreadIds
+      });
+
+      if (error) throw error;
+
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+      setUnreadCount(0);
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+    }
   };
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
-      case "message": return <MessageCircle className="w-4 h-4 text-blue-500" />;
-      case "favorite": return <Heart className="w-4 h-4 text-red-500" />;
-      case "view": return <Eye className="w-4 h-4 text-green-500" />;
-      case "review": return <Star className="w-4 h-4 text-yellow-500" />;
+      case "new_message": return <MessageCircle className="w-4 h-4 text-blue-500" />;
+      case "favorite_added": return <Heart className="w-4 h-4 text-red-500" />;
+      case "listing_views": return <Eye className="w-4 h-4 text-green-500" />;
+      case "price_offer": return <Gift className="w-4 h-4 text-purple-500" />;
+      case "login_success": return <User className="w-4 h-4 text-green-600" />;
+      case "registration_success": return <User className="w-4 h-4 text-blue-600" />;
       default: return <Bell className="w-4 h-4" />;
+    }
+  };
+
+  const handleNotificationClick = (notification: Notification) => {
+    markAsRead(notification.id);
+    
+    // Навігація залежно від типу сповіщення
+    switch (notification.type) {
+      case 'new_message':
+        if (notification.data?.sender_id) {
+          navigate(`/messages/${notification.data.sender_id}`);
+        } else {
+          navigate('/messages');
+        }
+        break;
+      case 'favorite_added':
+      case 'listing_views':
+      case 'price_offer':
+        if (notification.data?.listing_id) {
+          navigate(`/listing/${notification.data.listing_id}`);
+        }
+        break;
+      default:
+        break;
     }
   };
 
@@ -170,10 +206,10 @@ export function NotificationBell() {
               {notifications.map((notification) => (
                 <div
                   key={notification.id}
-                  className={`p-3 border-b cursor-pointer hover:bg-muted/50 ${
+                  className={`p-3 border-b cursor-pointer hover:bg-muted/50 transition-colors ${
                     !notification.is_read ? 'bg-primary/5' : ''
                   }`}
-                  onClick={() => markAsRead(notification.id)}
+                  onClick={() => handleNotificationClick(notification)}
                 >
                   <div className="flex items-start gap-3">
                     {getNotificationIcon(notification.type)}
@@ -186,9 +222,11 @@ export function NotificationBell() {
                           <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0" />
                         )}
                       </div>
-                      <p className="text-sm text-muted-foreground truncate">
-                        {notification.content}
-                      </p>
+                      {notification.message && (
+                        <p className="text-sm text-muted-foreground truncate">
+                          {notification.message}
+                        </p>
+                      )}
                       <p className="text-xs text-muted-foreground mt-1">
                         {formatDistanceToNow(new Date(notification.created_at), {
                           addSuffix: true,
@@ -210,7 +248,12 @@ export function NotificationBell() {
         
         {notifications.length > 0 && (
           <div className="p-2 border-t">
-            <Button variant="ghost" className="w-full text-sm">
+            <Button 
+              variant="ghost" 
+              className="w-full text-sm"
+              onClick={() => navigate('/notifications')}
+            >
+              <ExternalLink className="w-4 h-4 mr-2" />
               Переглянути всі
             </Button>
           </div>

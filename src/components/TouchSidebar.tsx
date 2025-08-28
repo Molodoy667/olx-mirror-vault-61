@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { 
   Menu, 
   X, 
@@ -22,6 +23,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 import { cn } from "@/lib/utils";
 import { GradientAvatar } from "@/components/ui/gradient-avatar";
+import { supabase } from "@/integrations/supabase/client";
 
 interface TouchSidebarProps {
   isOpen: boolean;
@@ -40,6 +42,24 @@ export function TouchSidebar({ isOpen, onClose, onToggle }: TouchSidebarProps) {
   const isDragging = useRef<boolean>(false);
   const startY = useRef<number>(0);
   const isScrolling = useRef<boolean>(false);
+
+  // Запит для отримання даних профілю
+  const { data: profile } = useQuery({
+    queryKey: ['profile', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
 
   // Handle touch events for swipe gestures and scrolling
   useEffect(() => {
@@ -162,7 +182,7 @@ export function TouchSidebar({ isOpen, onClose, onToggle }: TouchSidebarProps) {
     { 
       icon: User, 
       label: 'Мій профіль', 
-      action: () => handleNavigation(user?.user_metadata?.username ? `/profile/@${user.user_metadata.username}` : `/profile/${user.id}`),
+      action: () => handleNavigation(profile?.username ? `/profile/@${profile.username}` : user?.user_metadata?.username ? `/profile/@${user.user_metadata.username}` : `/profile/${user?.id}`),
       color: 'text-blue-500'
     },
     { 
@@ -248,17 +268,19 @@ export function TouchSidebar({ isOpen, onClose, onToggle }: TouchSidebarProps) {
             {user ? (
               <>
                 <GradientAvatar
-                  src={user.user_metadata?.avatar_url}
-                  username={user.user_metadata?.username || user.email?.split('@')[0]}
+                  src={profile?.avatar_url || user.user_metadata?.avatar_url}
+                  username={profile?.username || user.user_metadata?.username || user.email?.split('@')[0]}
                   size="lg"
                   className="border-2 border-primary/20 flex-shrink-0"
                   alt="User Avatar"
                 />
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-foreground truncate">
-                    {user.user_metadata?.full_name || user.email?.split('@')[0] || 'Користувач'}
+                    {profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Користувач'}
                   </p>
-                  <p className="text-sm text-muted-foreground truncate">{user.email}</p>
+                  <p className="text-sm text-muted-foreground truncate">
+                    {profile?.username ? `@${profile.username}` : user.email}
+                  </p>
                 </div>
               </>
             ) : (
