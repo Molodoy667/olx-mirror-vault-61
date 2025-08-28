@@ -21,9 +21,10 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { 
   showSuccessToast, 
-  showErrorToast,
+  showErrorToast, 
   showInfoToast 
 } from '@/lib/toast-helpers';
+import { testSupabaseConnection, testAlternativeQuery } from '@/lib/test-sql';
 import { loadSQLFiles, executeSQLFile, deleteSQLFile } from '@/lib/sqlFiles';
 
 interface SQLFile {
@@ -64,6 +65,28 @@ export function SQLFileManager({ onFileExecute }: SQLFileManagerProps) {
       showErrorToast('Помилка', 'Не вдалося завантажити список SQL файлів');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Диагностика подключения к Supabase
+  const runDiagnostics = async () => {
+    console.log('🔍 Starting SQL diagnostics...');
+    showInfoToast('Діагностика', 'Запуск тестування з\'єднання з базою даних...');
+    
+    try {
+      const connectionResult = await testSupabaseConnection();
+      const alternativeResult = await testAlternativeQuery();
+      
+      console.log('📊 Diagnostics results:', { connectionResult, alternativeResult });
+      
+      if (connectionResult.success) {
+        showSuccessToast('Діагностика успішна', 'З\'єднання з базою даних працює коректно');
+      } else {
+        showErrorToast('Діагностика виявила проблему', `${connectionResult.error?.message || 'Невідома помилка'}`);
+      }
+    } catch (error: any) {
+      console.error('❌ Diagnostics failed:', error);
+      showErrorToast('Помилка діагностики', error.message || 'Невідома помилка');
     }
   };
 
@@ -364,6 +387,15 @@ export function SQLFileManager({ onFileExecute }: SQLFileManagerProps) {
             >
               <Upload className="h-4 w-4 mr-2" />
               Завантажити файл
+            </Button>
+            <Button 
+              variant="secondary"
+              size="sm"
+              className="w-full sm:w-auto"
+              onClick={runDiagnostics}
+            >
+              <AlertTriangle className="h-4 w-4 mr-2" />
+              Діагностика DB
             </Button>
           </div>
 
