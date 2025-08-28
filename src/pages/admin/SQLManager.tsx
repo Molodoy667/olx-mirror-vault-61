@@ -1,7 +1,6 @@
 import { useState, useRef } from 'react';
 import { useAdmin } from '@/hooks/useAdmin';
 import { supabase } from '@/integrations/supabase/client';
-import { Header } from '@/components/Header';
 import { AdminHeader } from '@/components/admin/AdminHeader';
 import { SQLFileManager } from '@/components/admin/SQLFileManager';
 import { DatabaseAnalyzer } from '@/components/admin/DatabaseAnalyzer';
@@ -256,7 +255,7 @@ export default function SQLManager() {
   if (adminLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+        <AdminHeader />
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">Завантаження...</div>
         </div>
@@ -267,7 +266,7 @@ export default function SQLManager() {
   if (!isAdmin) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+        <AdminHeader />
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">
             <AlertCircle className="w-16 h-16 text-destructive mx-auto mb-4" />
@@ -466,7 +465,6 @@ export default function SQLManager() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <AdminHeader />
       
       <div className="container mx-auto px-2 sm:px-4 lg:px-6 py-4 sm:py-8">

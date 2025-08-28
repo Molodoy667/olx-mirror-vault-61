@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAdmin } from '@/hooks/useAdmin';
 import { supabase } from '@/integrations/supabase/client';
-import { Header } from '@/components/Header';
 import { AdminHeader } from '@/components/admin/AdminHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -509,7 +508,7 @@ CREATE INDEX IF NOT EXISTS idx_listings_status ON listings(status);
   if (adminLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+        <AdminHeader />
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">Завантаження...</div>
         </div>
@@ -520,7 +519,7 @@ CREATE INDEX IF NOT EXISTS idx_listings_status ON listings(status);
   if (!isAdmin) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+        <AdminHeader />
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">
             <AlertCircle className="w-16 h-16 text-destructive mx-auto mb-4" />
@@ -534,7 +533,6 @@ CREATE INDEX IF NOT EXISTS idx_listings_status ON listings(status);
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <AdminHeader />
       
       <div className="container mx-auto px-4 py-8">
