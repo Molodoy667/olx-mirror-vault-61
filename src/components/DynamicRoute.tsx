@@ -17,28 +17,37 @@ export function DynamicRoute() {
         return;
       }
 
+      console.log('🔍 DynamicRoute analyzing:', dynamicParam);
+
       // Перевіряємо чи це profile_id (тільки 6 цифр)
       if (/^\d{6}$/.test(dynamicParam)) {
+        console.log('✅ Detected 6-digit profile_id');
         // Спочатку перевіряємо чи існує такий profile_id
         const userId = await getUserIdByProfileId(dynamicParam);
         if (userId) {
+          console.log('✅ Profile found in DB');
           setRouteType('profile');
           return;
+        } else {
+          console.log('❌ Profile not found in DB');
         }
       }
 
       // Перевіряємо чи це 6-символьний фрагмент з UUID (тимчасовий fallback)
       if (/^[A-F0-9]{6}$/i.test(dynamicParam)) {
+        console.log('✅ Detected UUID fragment for profile');
         setRouteType('profile');
         return;
       }
 
-      // Перевіряємо чи це SEO URL оголошення (містить дефіс і 6 символів після)
+      // Перевіряємо чи це SEO URL оголошення (містить дефіс і 8 символів після)
       if (isSeoUrl(`/${dynamicParam}`)) {
+        console.log('✅ Detected SEO URL for listing');
         setRouteType('listing');
         return;
       }
 
+      console.log('❌ No match found, showing 404');
       // Якщо нічого не підійшло
       setRouteType('notfound');
     };

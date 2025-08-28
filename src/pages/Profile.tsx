@@ -23,8 +23,11 @@ export default function Profile() {
   const { data: profile } = useQuery({
     queryKey: ['profile', id],
     queryFn: async () => {
+      console.log('🔍 Profile page analyzing ID:', id);
+      
       // Спочатку пробуємо знайти по profile_id (6 цифр)
       if (id && id.length === 6 && /^\d+$/.test(id)) {
+        console.log('✅ Trying profile_id lookup');
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
@@ -32,12 +35,16 @@ export default function Profile() {
           .single();
         
         if (!error && data) {
+          console.log('✅ Found profile by profile_id');
           return data;
+        } else {
+          console.log('❌ Not found by profile_id');
         }
       }
 
       // Перевіряємо чи це 6-символьний фрагмент з UUID (тимчасовий fallback)
       if (id && id.length === 6 && /^[A-F0-9]+$/i.test(id)) {
+        console.log('✅ Trying UUID fragment lookup');
         // Шукаємо профіль де user_id починається з цих символів
         const { data, error } = await supabase
           .from('profiles')
@@ -45,10 +52,14 @@ export default function Profile() {
           .ilike('id', `${id}%`);
         
         if (!error && data && data.length > 0) {
+          console.log('✅ Found profile by UUID fragment');
           return data[0]; // Повертаємо перший знайдений профіль
+        } else {
+          console.log('❌ Not found by UUID fragment');
         }
       }
       
+      console.log('✅ Trying full user ID lookup');
       // Якщо не знайшли по profile_id, пробуємо по повному user ID
       const { data, error } = await supabase
         .from('profiles')
@@ -56,7 +67,11 @@ export default function Profile() {
         .eq('id', id)
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.log('❌ Error in full ID lookup:', error);
+        throw error;
+      }
+      console.log('✅ Found profile by full ID');
       return data;
     },
     enabled: !!id
