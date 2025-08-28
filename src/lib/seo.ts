@@ -144,6 +144,82 @@ export async function getListingIdBySeoUrl(seoUrl: string): Promise<string | nul
 }
 
 /**
+ * Очищает и пересоздает SEO URL для всех объявлений
+ */
+export async function regenerateAllSeoUrls(): Promise<{ success: number; errors: number }> {
+  try {
+    let success = 0;
+    let errors = 0;
+
+    // Получаем все объявления
+    const { data: listings, error: listingsError } = await supabase
+      .from('listings')
+      .select('id, title')
+      .eq('status', 'active');
+
+    if (listingsError) {
+      console.error('Error fetching listings:', listingsError);
+      return { success: 0, errors: 1 };
+    }
+
+    if (!listings || listings.length === 0) {
+      console.log('No active listings found');
+      return { success: 0, errors: 0 };
+    }
+
+    console.log(`🔄 Regenerating SEO URLs for ${listings.length} listings...`);
+
+    // Удаляем все старые SEO URL
+    const { error: deleteError } = await supabase
+      .from('seo_urls')
+      .delete()
+      .neq('id', '00000000-0000-0000-0000-000000000000'); // Удаляем все
+
+    if (deleteError) {
+      console.error('Error deleting old SEO URLs:', deleteError);
+    } else {
+      console.log('✅ Deleted all old SEO URLs');
+    }
+
+    // Создаем новые SEO URL для каждого объявления
+    for (const listing of listings) {
+      try {
+        const slug = generateSlug(listing.title);
+        const cleanId = listing.id.replace(/-/g, '');
+        const seoId = cleanId.length >= 8 ? cleanId.substring(0, 8).toUpperCase() : cleanId.toUpperCase();
+        const fullUrl = `/${slug}-${seoId}`;
+
+        const { error: insertError } = await supabase
+          .from('seo_urls')
+          .insert({
+            listing_id: listing.id,
+            slug: slug,
+            seo_id: seoId,
+            full_url: fullUrl
+          });
+
+        if (insertError) {
+          console.error(`❌ Error creating SEO URL for ${listing.id}:`, insertError);
+          errors++;
+        } else {
+          console.log(`✅ Created SEO URL for ${listing.title}: ${fullUrl}`);
+          success++;
+        }
+      } catch (error) {
+        console.error(`❌ Error processing listing ${listing.id}:`, error);
+        errors++;
+      }
+    }
+
+    console.log(`🎉 Regeneration complete: ${success} success, ${errors} errors`);
+    return { success, errors };
+  } catch (error) {
+    console.error('Error in regenerateAllSeoUrls:', error);
+    return { success: 0, errors: 1 };
+  }
+}
+
+/**
  * Генерирует полный SEO-friendly URL для объявления (устаревший метод)
  * @deprecated Используйте getOrCreateSeoUrl
  */

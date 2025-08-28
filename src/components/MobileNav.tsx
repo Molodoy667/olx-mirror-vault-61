@@ -47,19 +47,7 @@ export function MobileNav() {
         </Link>
         
         <Link 
-          to="/auth" 
-          onClick={async (e) => {
-            if (user) {
-              e.preventDefault();
-              try {
-                const { getProfileUrlForUser } = await import('@/lib/profileUtils');
-                const profileUrl = await getProfileUrlForUser(user.id);
-                window.location.href = profileUrl;
-              } catch (error) {
-                window.location.href = `/profile/${user.id}`;
-              }
-            }
-          }} 
+          to={user ? "/profile" : "/auth"} 
           className="flex flex-col items-center justify-center text-muted-foreground hover:text-primary transition-colors"
         >
           <User className="w-5 h-5" />

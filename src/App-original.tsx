@@ -84,6 +84,9 @@ const App = () => (
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/search" element={<Search />} />
                 <Route path="/create" element={<CreateListing />} />
+                
+                {/* Own profile route */}
+                <Route path="/profile" element={<Profile />} />
                 {/* Legacy profile route for backwards compatibility */}
                 <Route path="/profile/:id" element={<Profile />} />
                 

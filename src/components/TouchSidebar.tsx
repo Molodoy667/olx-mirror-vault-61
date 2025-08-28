@@ -67,16 +67,8 @@ export function TouchSidebar({ isOpen, onClose, onToggle }: TouchSidebarProps) {
   };
 
   const getProfileUrl = () => {
-    const profileId = getProfileId();
-    if (profileId) {
-      return `/${profileId}`;
-    }
-    // Тимчасовий fallback - використовуємо перші 6 цифр з user.id
-    if (user?.id) {
-      const tempId = user.id.replace(/-/g, '').substring(0, 6);
-      return `/${tempId}`;
-    }
-    return `/profile/${user?.id}`;
+    // Для собственного профиля всегда используем /profile
+    return '/profile';
   };
 
   const getDisplayName = () => {

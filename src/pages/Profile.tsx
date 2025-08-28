@@ -15,17 +15,44 @@ import { BusinessUpgradeDialog } from '@/components/BusinessUpgradeDialog';
 import { VIPPromotionDialog } from '@/components/VIPPromotionDialog';
 
 export default function Profile() {
-  const { id } = useParams(); // тепер тільки profile_id або user_id
+  const { id } = useParams(); // ID з URL або undefined для /profile
   const { user } = useAuth();
   const navigate = useNavigate();
   const { isAdmin } = useAdmin();
 
+  // Якщо немає ID в URL (/profile), показуємо власний профіль
+  const targetUserId = id || user?.id;
+
   const { data: profile, isLoading: profileLoading, error: profileError } = useQuery({
-    queryKey: ['profile', id],
+    queryKey: ['profile', targetUserId],
     queryFn: async () => {
-      console.log('🔍 Profile page analyzing ID:', id);
+      console.log('🔍 Profile page analyzing targetUserId:', targetUserId);
       
-      // Спочатку пробуємо знайти по profile_id (6 цифр)
+      // Якщо немає ні ID, ні користувача - помилка
+      if (!targetUserId) {
+        console.log('❌ No target user ID and not authenticated');
+        throw new Error('Unauthorized');
+      }
+      
+      // Якщо це власний профіль (/profile), шукаємо по user.id
+      if (!id && user?.id) {
+        console.log('✅ Trying own profile lookup by user.id');
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+        
+        if (!error && data) {
+          console.log('✅ Found own profile');
+          return data;
+        } else {
+          console.log('❌ Own profile not found');
+          throw new Error('Own profile not found');
+        }
+      }
+
+      // Якщо це чужий профіль з ID - спочатку пробуємо знайти по profile_id (6 цифр)
       if (id && id.length === 6 && /^\d+$/.test(id)) {
         console.log('✅ Trying profile_id lookup');
         const { data, error } = await supabase
@@ -64,7 +91,7 @@ export default function Profile() {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', id)
+        .eq('id', targetUserId)
         .single();
       
       if (error) {
@@ -74,7 +101,7 @@ export default function Profile() {
       console.log('✅ Found profile by full ID');
       return data;
     },
-    enabled: !!id,
+    enabled: !!targetUserId,
     retry: false
   });
 
@@ -118,7 +145,7 @@ export default function Profile() {
             created_at
           )
         `)
-        .eq('user_id', id);
+        .eq('user_id', profile?.id);
       
       if (error) throw error;
       return data;
@@ -177,7 +204,11 @@ export default function Profile() {
               <div className="space-y-2">
                 <h1 className="text-2xl font-bold">Профіль не знайдено</h1>
                 <p className="text-muted-foreground">
-                  Користувач з ID <code className="bg-muted px-2 py-1 rounded font-mono text-sm">{id}</code> не існує або був видалений
+                  {id ? (
+                    <>Користувач з ID <code className="bg-muted px-2 py-1 rounded font-mono text-sm">{id}</code> не існує або був видалений</>
+                  ) : (
+                    <>Ваш профіль не знайдено. Можливо, ви не авторизовані</>
+                  )}
                 </p>
               </div>
               

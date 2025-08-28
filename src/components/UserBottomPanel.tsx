@@ -67,7 +67,7 @@ export function UserBottomPanel() {
     {
       icon: User,
       label: 'Профіль',
-      path: `/profile/${user?.id || 'guest'}`,
+      path: '/profile',
       color: 'text-orange-500'
     }
   ];
@@ -79,18 +79,7 @@ export function UserBottomPanel() {
     return location.pathname.startsWith(path);
   };
 
-  const handleNavigation = async (path: string, index: number) => {
-    // Якщо це профіль (останній елемент) і користувач авторизований
-    if (index === menuItems.length - 1 && user) {
-      try {
-        const { getProfileUrlForUser } = await import('@/lib/profileUtils');
-        const profileUrl = await getProfileUrlForUser(user.id);
-        navigate(profileUrl);
-        return;
-      } catch (error) {
-        // Fallback на старий формат
-      }
-    }
+  const handleNavigation = (path: string) => {
     navigate(path);
   };
 
@@ -100,7 +89,7 @@ export function UserBottomPanel() {
         {menuItems.map((item, index) => (
           <button
             key={index}
-            onClick={() => handleNavigation(item.path, index)}
+            onClick={() => handleNavigation(item.path)}
             className={cn(
               "flex flex-col items-center space-y-1 p-2 rounded-lg transition-all duration-200 min-w-0 flex-1",
               "active:scale-95 touch-manipulation",

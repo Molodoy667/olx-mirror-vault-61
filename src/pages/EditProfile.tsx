@@ -90,11 +90,7 @@ export default function EditProfile() {
         .eq('id', user.id)
         .single();
       
-      const profileUrl = profileData?.profile_id 
-        ? `/${profileData.profile_id}` 
-        : `/profile/${user.id}`;
-      
-      navigate(profileUrl);
+      navigate('/profile');
     } catch (error: any) {
       toast({
         title: "Помилка",
@@ -198,14 +194,7 @@ export default function EditProfile() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={async () => {
-                  try {
-                    const profileUrl = await import('@/lib/profileUtils').then(m => m.getProfileUrlForUser(user.id));
-                    navigate(profileUrl);
-                  } catch (error) {
-                    navigate(`/profile/${user.id}`);
-                  }
-                }}
+                onClick={() => navigate('/profile')}
                 disabled={loading}
                 className="w-full sm:w-auto order-2 sm:order-1"
               >

@@ -58,14 +58,7 @@ export function Header() {
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={async () => {
-                        try {
-                          const profileUrl = await import('@/lib/profileUtils').then(m => m.getProfileUrlForUser(user.id));
-                          navigate(profileUrl);
-                        } catch (error) {
-                          navigate(`/profile/${user.id}`);
-                        }
-                      }}>
+                      <DropdownMenuItem onClick={() => navigate('/profile')}>
                         <User className="w-4 h-4 mr-2" />
                         Мій профіль
                       </DropdownMenuItem>

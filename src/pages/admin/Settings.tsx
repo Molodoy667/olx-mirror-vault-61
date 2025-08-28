@@ -22,7 +22,9 @@ import {
   Database,
   Palette,
   Bell,
-  FileImage
+  FileImage,
+  Link,
+  RefreshCw
 } from 'lucide-react';
 
 interface SystemSettings {
@@ -36,6 +38,120 @@ interface SystemSettings {
   email_notifications: boolean;
   default_currency: string;
   max_listing_price: number;
+}
+
+// Компонент для управления SEO URL
+function SeoManagementSection() {
+  const [regenerating, setRegenerating] = useState(false);
+  const [stats, setStats] = useState<{ total: number; withSeo: number } | null>(null);
+
+  // Загружаем статистику SEO URL
+  const loadSeoStats = async () => {
+    try {
+      const [listingsResult, seoUrlsResult] = await Promise.all([
+        supabase.from('listings').select('id', { count: 'exact' }).eq('status', 'active'),
+        supabase.from('seo_urls').select('id', { count: 'exact' })
+      ]);
+
+      setStats({
+        total: listingsResult.count || 0,
+        withSeo: seoUrlsResult.count || 0
+      });
+    } catch (error) {
+      console.error('Error loading SEO stats:', error);
+    }
+  };
+
+  // Пересоздание всех SEO URL
+  const handleRegenerateAll = async () => {
+    setRegenerating(true);
+    try {
+      const { regenerateAllSeoUrls } = await import('@/lib/seo');
+      const result = await regenerateAllSeoUrls();
+      
+      toast({
+        title: "SEO URL оновлено",
+        description: `Успішно: ${result.success}, Помилок: ${result.errors}`,
+        variant: result.errors > 0 ? "destructive" : "default"
+      });
+      
+      // Обновляем статистику
+      await loadSeoStats();
+    } catch (error) {
+      toast({
+        title: "Помилка",
+        description: "Не вдалося оновити SEO URL",
+        variant: "destructive"
+      });
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
+  // Загружаем статистику при монтировании
+  useEffect(() => {
+    loadSeoStats();
+  }, []);
+
+  return (
+    <div className="space-y-4">
+      {/* Статистика */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-green-50 dark:bg-green-950/30 p-4 rounded-lg border border-green-200 dark:border-green-800">
+          <h5 className="font-semibold text-green-900 dark:text-green-100">Активних оголошень</h5>
+          <p className="text-2xl font-bold text-green-700 dark:text-green-300">
+            {stats?.total ?? '...'}
+          </p>
+        </div>
+        
+        <div className="bg-blue-50 dark:bg-blue-950/30 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+          <h5 className="font-semibold text-blue-900 dark:text-blue-100">З SEO URL</h5>
+          <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
+            {stats?.withSeo ?? '...'}
+          </p>
+        </div>
+      </div>
+
+      {/* Действия */}
+      <div className="space-y-3">
+        <div className="bg-amber-50 dark:bg-amber-950/30 p-4 rounded-lg border border-amber-200 dark:border-amber-800">
+          <h5 className="font-semibold text-amber-900 dark:text-amber-100 mb-2">
+            ⚠️ Пересоздання всіх SEO URL
+          </h5>
+          <p className="text-sm text-amber-800 dark:text-amber-200 mb-3">
+            Це видалить всі існуючі SEO URL та створить нові з правильним форматом.
+            Старі посилання перестануть працювати!
+          </p>
+          <Button 
+            onClick={handleRegenerateAll}
+            disabled={regenerating}
+            variant="destructive"
+            className="w-full"
+          >
+            {regenerating ? (
+              <>
+                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                Оновлення...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Пересоздати всі SEO URL
+              </>
+            )}
+          </Button>
+        </div>
+
+        <Button 
+          onClick={loadSeoStats}
+          variant="outline"
+          className="w-full"
+        >
+          🔄 Оновити статистику
+        </Button>
+      </div>
+    </div>
+  );
 }
 
 export default function AdminSettings() {
@@ -183,6 +299,10 @@ export default function AdminSettings() {
                 <TabsTrigger value="media" className="flex items-center gap-2">
                   <FileImage className="w-4 h-4" />
                   <span className="hidden sm:inline">Медіа</span>
+                </TabsTrigger>
+                <TabsTrigger value="seo" className="flex items-center gap-2">
+                  <Link className="w-4 h-4" />
+                  <span className="hidden sm:inline">SEO URL</span>
                 </TabsTrigger>
                 <TabsTrigger value="appearance" className="flex items-center gap-2">
                   <Palette className="w-4 h-4" />
@@ -367,6 +487,33 @@ export default function AdminSettings() {
                         Рекомендовано: 5-10 зображень
                       </p>
                     </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* SEO та URL налаштування */}
+              <TabsContent value="seo" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Link className="w-5 h-5" />
+                      Управління SEO URL
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="bg-blue-50 dark:bg-blue-950/30 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                        Формат SEO URL
+                      </h4>
+                      <p className="text-sm text-blue-800 dark:text-blue-200 mb-3">
+                        Правильний формат: <code className="bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">/seo-slug-LISTINGID</code>
+                      </p>
+                      <p className="text-sm text-blue-700 dark:text-blue-300">
+                        Приклад: <code className="bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">/prodazh-iphone-A1B2C3D4</code>
+                      </p>
+                    </div>
+
+                    <SeoManagementSection />
                   </CardContent>
                 </Card>
               </TabsContent>
