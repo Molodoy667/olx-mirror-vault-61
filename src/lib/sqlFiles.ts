@@ -489,48 +489,87 @@ export async function executeSQLFile(fileName: string, onProgress?: (progress: n
     
     if (onProgress) onProgress(10);
     
-    // Имитируем выполнение для демонстрации
-    // В реальном приложении здесь был бы API вызов к бэкенду
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    if (onProgress) onProgress(50);
-    
-    // Анализируем SQL для извлечения информации
+    // Разбиваем SQL на отдельные команды
     const statements = content.split(';').filter(s => s.trim().length > 0);
-    const tableMatches = content.match(/CREATE TABLE[^;]*/gi) || [];
-    const functionMatches = content.match(/CREATE OR REPLACE FUNCTION[^$]*?\$\$/gi) || [];
+    let rowsAffected = 0;
+    const results = [];
+    const errors = [];
     
-    if (onProgress) onProgress(80);
+    const { supabase } = await import('@/integrations/supabase/client');
     
-    // Имитируем небольшую задержку
-    await new Promise(resolve => setTimeout(resolve, 500));
+    for (let i = 0; i < statements.length; i++) {
+      const statement = statements[i].trim();
+      if (!statement) continue;
+      
+      if (onProgress) onProgress(10 + (i / statements.length) * 80);
+      
+      try {
+        const { data, error, count } = await supabase.rpc('exec_sql', { query: statement });
+        
+        if (error) {
+          console.error(`SQL Error in statement ${i + 1}:`, error);
+          errors.push({
+            statement: i + 1,
+            query: statement.substring(0, 100) + (statement.length > 100 ? '...' : ''),
+            error: error.message
+          });
+        } else {
+          results.push(data);
+          if (count !== null) rowsAffected += count;
+        }
+      } catch (statementError: any) {
+        console.error(`Statement error for ${fileName}:`, statementError);
+        errors.push({
+          statement: i + 1,
+          query: statement.substring(0, 100) + (statement.length > 100 ? '...' : ''),
+          error: statementError.message
+        });
+      }
+    }
     
     if (onProgress) onProgress(100);
     
     const executionTime = Date.now() - startTime;
     
-    // Имитируем результат выполнения
-    const mockResult = {
-      tablesCreated: tableMatches.length,
-      functionsCreated: functionMatches.length,
-      statementsExecuted: statements.length,
-      warnings: [] as string[]
-    };
-    
-    // Добавляем предупреждения для некоторых типов SQL команд
-    if (content.includes('DROP')) {
-      mockResult.warnings.push('Обнаружены DROP команды');
+    // Если есть ошибки, но также и успешные результаты
+    if (errors.length > 0 && results.length > 0) {
+      return {
+        success: true,
+        message: `Файл ${fileName} выполнен с предупреждениями`,
+        data: {
+          results,
+          errors,
+          successfulStatements: results.length,
+          failedStatements: errors.length,
+          totalStatements: statements.length
+        },
+        executionTime,
+        rowsAffected
+      };
     }
-    if (content.includes('ALTER')) {
-      mockResult.warnings.push('Обнаружены ALTER команды');
+    
+    // Если только ошибки
+    if (errors.length > 0 && results.length === 0) {
+      return {
+        success: false,
+        message: `Ошибка выполнения файла ${fileName}`,
+        error: `Все SQL команды завершились с ошибками. Первая ошибка: ${errors[0].error}`,
+        data: { errors },
+        executionTime
+      };
     }
     
+    // Если все успешно
     return {
       success: true,
-      message: `Файл ${fileName} успешно выполнен (демо режим)`,
-      data: mockResult,
+      message: `Файл ${fileName} успешно выполнен`,
+      data: {
+        results,
+        successfulStatements: statements.length,
+        totalStatements: statements.length
+      },
       executionTime,
-      rowsAffected: statements.length
+      rowsAffected
     };
   } catch (error: any) {
     return {
