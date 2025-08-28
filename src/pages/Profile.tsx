@@ -15,45 +15,57 @@ import { BusinessUpgradeDialog } from '@/components/BusinessUpgradeDialog';
 import { VIPPromotionDialog } from '@/components/VIPPromotionDialog';
 
 export default function Profile() {
-  const { id } = useParams();
+  const { id, username } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const isOwnProfile = user?.id === id;
   const { isAdmin } = useAdmin();
 
+  // Визначаємо чи це username чи ID
+  const isUsernameRoute = Boolean(username);
+  const profileIdentifier = isUsernameRoute ? username : id;
+
   const { data: profile } = useQuery({
-    queryKey: ['profile', id],
+    queryKey: ['profile', profileIdentifier, isUsernameRoute],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', id)
-        .single();
+      let query = supabase.from('profiles').select('*');
+      
+      if (isUsernameRoute) {
+        query = query.eq('username', profileIdentifier);
+      } else {
+        query = query.eq('id', profileIdentifier);
+      }
+      
+      const { data, error } = await query.single();
       
       if (error) throw error;
       return data;
     },
   });
 
+  const isOwnProfile = user?.id === profile?.id;
+
   const { data: listings } = useQuery({
-    queryKey: ['user-listings', id],
+    queryKey: ['user-listings', profile?.id],
     queryFn: async () => {
+      if (!profile?.id) return [];
+      
       const { data, error } = await supabase
         .from('listings')
         .select('*')
-        .eq('user_id', id)
+        .eq('user_id', profile.id)
         .eq('status', 'active')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       return data;
     },
+    enabled: !!profile?.id,
   });
 
   const { data: favorites } = useQuery({
-    queryKey: ['user-favorites', id],
+    queryKey: ['user-favorites', profile?.id],
     queryFn: async () => {
-      if (!isOwnProfile) return [];
+      if (!profile?.id || !isOwnProfile) return [];
       
       const { data, error } = await supabase
         .from('favorites')

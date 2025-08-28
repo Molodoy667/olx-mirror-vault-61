@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { GradientAvatar } from '@/components/ui/gradient-avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send, User, Circle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -137,15 +137,12 @@ export function ChatInterface({ conversationId, otherUserId, listingId }: ChatIn
       {/* Chat Header */}
       <div className="p-4 border-b flex items-center gap-3">
         <div className="relative">
-          <Avatar 
-            className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity"
+          <GradientAvatar
+            src={otherUserProfile?.avatar_url}
+            username={otherUserProfile?.username || otherUserProfile?.full_name}
+            size="md"
             onClick={() => navigate(`/profile/${otherUserId}`)}
-          >
-            <AvatarImage src={otherUserProfile?.avatar_url} />
-            <AvatarFallback>
-              <User className="h-5 w-5" />
-            </AvatarFallback>
-          </Avatar>
+          />
           {/* Online indicator */}
           {getOnlineStatus(otherUserProfile?.last_seen).online && (
             <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-background rounded-full"></div>
@@ -176,13 +173,13 @@ export function ChatInterface({ conversationId, otherUserId, listingId }: ChatIn
                 className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-xs px-3 py-2 rounded-lg break-words overflow-hidden ${
+                  className={`max-w-xs sm:max-w-sm md:max-w-md px-3 py-2 rounded-lg break-words overflow-hidden word-wrap break-all ${
                     isOwnMessage
                       ? 'bg-primary text-primary-foreground'
                       : 'bg-muted'
                   }`}
                 >
-                  <p className="text-sm break-words whitespace-pre-wrap">{message.content}</p>
+                  <p className="text-sm break-words whitespace-pre-wrap overflow-wrap-anywhere word-break-break-word">{message.content}</p>
                   <p className="text-xs opacity-70 mt-1">
                     {formatDistanceToNow(new Date(message.created_at), {
                       addSuffix: true,

@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +13,7 @@ import { cn } from '@/lib/utils';
 
 export default function Auth() {
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -27,8 +29,29 @@ export default function Auth() {
   });
   const [errors, setErrors] = useState<{[key: string]: string}>({});
 
+  // Redirect авторизованих користувачів
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate('/', { replace: true });
+    }
+  }, [user, authLoading, navigate]);
+
   const isValidEmail = (email: string) => /\S+@\S+\.\S+/.test(email);
   const isValidUsername = (username: string) => /^[a-zA-Z0-9_]{3,20}$/.test(username);
+
+  // Показуємо loader поки перевіряємо авторизацію
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // Якщо користувач авторизований - нічого не показуємо (redirect відбудеться)
+  if (user) {
+    return null;
+  }
 
   const validateForm = () => {
     const newErrors: {[key: string]: string} = {};
@@ -224,7 +247,7 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md animate-fade-in">
         <Card className="backdrop-blur-sm bg-card/95 shadow-xl border-border/50">
           <CardHeader className="space-y-1 text-center pb-8">

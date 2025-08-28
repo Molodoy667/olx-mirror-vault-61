@@ -7,7 +7,7 @@ import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { GradientAvatar } from '@/components/ui/gradient-avatar';
 import { toast } from '@/hooks/use-toast';
 import { Send, ArrowLeft, User, Circle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -41,6 +41,7 @@ interface Message {
 interface Chat {
   user_id: string;
   user_name: string;
+  username?: string;
   avatar_url?: string;
   last_message: string;
   last_message_time: string;
@@ -117,6 +118,7 @@ export default function Messages() {
           chatMap.set(otherUserId, {
             user_id: otherUserId,
             user_name: otherUser?.full_name || otherUser?.username || 'Користувач',
+            username: otherUser?.username,
             avatar_url: otherUser?.avatar_url,
             last_message: msg.content,
             last_message_time: msg.created_at,
@@ -262,11 +264,11 @@ export default function Messages() {
                   >
                     <div className="flex items-start gap-3">
                       <div className="relative">
-                        <Avatar>
-                          <AvatarFallback>
-                            {chat.user_name[0]?.toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
+                        <GradientAvatar
+                          src={chat.avatar_url}
+                          username={chat.user_name}
+                          size="md"
+                        />
                         {/* Online indicator */}
                         {getOnlineStatus(chat.last_seen).online && (
                           <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-background rounded-full"></div>
@@ -324,14 +326,19 @@ export default function Messages() {
                   </Button>
                   
                   <div className="relative">
-                    <Avatar 
-                      className="cursor-pointer hover:opacity-80 transition-opacity"
-                      onClick={() => navigate(`/profile/${selectedChat}`)}
-                    >
-                      <AvatarFallback>
-                        <User className="w-5 h-5" />
-                      </AvatarFallback>
-                    </Avatar>
+                    <GradientAvatar
+                      src={chats.find(c => c.user_id === selectedChat)?.avatar_url}
+                      username={chats.find(c => c.user_id === selectedChat)?.user_name}
+                      size="md"
+                      onClick={() => {
+                        const currentChat = chats.find(c => c.user_id === selectedChat);
+                        const username = currentChat?.username;
+                        const profilePath = username 
+                          ? `/profile/@${username}` 
+                          : `/profile/${selectedChat}`;
+                        navigate(profilePath);
+                      }}
+                    />
                     {/* Online indicator in header */}
                     {(() => {
                       const currentChat = chats.find(c => c.user_id === selectedChat);
@@ -342,7 +349,14 @@ export default function Messages() {
                     })()}
                   </div>
                   
-                  <div className="flex-1 cursor-pointer" onClick={() => navigate(`/profile/${selectedChat}`)}>
+                  <div className="flex-1 cursor-pointer" onClick={() => {
+                    const currentChat = chats.find(c => c.user_id === selectedChat);
+                    const username = currentChat?.username;
+                    const profilePath = username 
+                      ? `/profile/@${username}` 
+                      : `/profile/${selectedChat}`;
+                    navigate(profilePath);
+                  }}>
                     <p className="font-medium hover:text-primary transition-colors">
                       {chats.find(c => c.user_id === selectedChat)?.user_name || 'Користувач'}
                     </p>
@@ -383,14 +397,14 @@ export default function Messages() {
                             message.sender_id === user.id ? 'justify-end' : 'justify-start'
                           }`}
                         >
-                                                  <div
-                          className={`max-w-[70%] rounded-lg p-3 break-words overflow-hidden ${
-                            message.sender_id === user.id
-                              ? 'bg-primary text-primary-foreground'
-                              : 'bg-muted'
-                          }`}
-                        >
-                          <p className="break-words whitespace-pre-wrap">{message.content}</p>
+                          <div
+                            className={`max-w-[70%] max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg rounded-lg p-3 break-words overflow-hidden word-wrap break-all ${
+                              message.sender_id === user.id
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-muted'
+                            }`}
+                          >
+                            <p className="break-words whitespace-pre-wrap overflow-wrap-anywhere word-break-break-word">{message.content}</p>
                           <p className="text-xs opacity-70 mt-1">
                             {formatDistanceToNow(new Date(message.created_at), {
                               addSuffix: true,

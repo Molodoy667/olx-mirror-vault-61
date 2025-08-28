@@ -8,7 +8,7 @@ import { Heart, User, Plus, ArrowRight, CheckCircle, Star, Sparkles } from 'luci
 
 export default function Welcome() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [isAnimating, setIsAnimating] = useState(false);
 
   const handleGoToProfile = () => {
@@ -21,13 +21,23 @@ export default function Welcome() {
     setTimeout(() => navigate('/create-listing'), 300);
   };
 
+  // Показуємо loader поки перевіряємо авторизацію
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // Перенаправляємо неавторизованих користувачів
   if (!user) {
-    navigate('/auth');
+    navigate('/auth', { replace: true });
     return null;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900 dark:to-purple-900 flex items-center justify-center px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center px-4 py-8">
       <div className={`w-full max-w-2xl transition-transform duration-300 ${isAnimating ? 'scale-95 opacity-80' : 'scale-100 opacity-100'}`}>
         <Card className="backdrop-blur-sm bg-white/95 dark:bg-gray-800/95 shadow-2xl border-0 overflow-hidden">
           <CardHeader className="text-center pb-6 relative overflow-hidden">

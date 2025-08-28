@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 import { cn } from "@/lib/utils";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { GradientAvatar } from "@/components/ui/gradient-avatar";
 
 interface TouchSidebarProps {
   isOpen: boolean;
@@ -162,7 +162,7 @@ export function TouchSidebar({ isOpen, onClose, onToggle }: TouchSidebarProps) {
     { 
       icon: User, 
       label: 'Мій профіль', 
-      action: () => handleNavigation(`/profile/${user.id}`),
+      action: () => handleNavigation(user?.user_metadata?.username ? `/profile/@${user.user_metadata.username}` : `/profile/${user.id}`),
       color: 'text-blue-500'
     },
     { 
@@ -247,20 +247,13 @@ export function TouchSidebar({ isOpen, onClose, onToggle }: TouchSidebarProps) {
           <div className="flex items-center space-x-3 flex-1">
             {user ? (
               <>
-                <Avatar className="w-12 h-12 border-2 border-primary/20 flex-shrink-0">
-                  <AvatarImage 
-                    src={user.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`} 
-                    alt="Avatar"
-                    onError={(e) => {
-                      // Якщо зображення не завантажилося, показуємо fallback
-                      const target = e.target as HTMLImageElement;
-                      target.style.display = 'none';
-                    }}
-                  />
-                  <AvatarFallback className="bg-primary text-primary-foreground text-lg font-semibold">
-                    {user.email?.charAt(0).toUpperCase() || 'U'}
-                  </AvatarFallback>
-                </Avatar>
+                <GradientAvatar
+                  src={user.user_metadata?.avatar_url}
+                  username={user.user_metadata?.username || user.email?.split('@')[0]}
+                  size="lg"
+                  className="border-2 border-primary/20 flex-shrink-0"
+                  alt="User Avatar"
+                />
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-foreground truncate">
                     {user.user_metadata?.full_name || user.email?.split('@')[0] || 'Користувач'}

@@ -83,6 +83,7 @@ const App = () => (
                 <Route path="/search" element={<Search />} />
                 <Route path="/create" element={<CreateListing />} />
                 <Route path="/profile/:id" element={<Profile />} />
+                <Route path="/profile/@:username" element={<Profile />} />
                 <Route path="/edit-profile" element={<EditProfile />} />
                 <Route path="/edit/:id" element={<EditListing />} />
                 <Route path="/category/:slug" element={<CategoryPage />} />
