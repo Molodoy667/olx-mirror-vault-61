@@ -14,6 +14,7 @@ import { lazyWithRetry } from "@/components/LazyRetry";
 // Lazy load all pages for better performance
 const Home = lazy(() => import("./pages/Home"));
 const Auth = lazy(() => import("./pages/Auth"));
+const Welcome = lazy(() => import("./pages/Welcome"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const ListingDetail = lazy(() => import("./pages/ListingDetail"));
 const Search = lazy(() => import("./pages/Search"));
@@ -76,6 +77,7 @@ const App = () => (
                 <Route path="/" element={<Home />} />
                 <Route path="/home" element={<Home />} />
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/welcome" element={<Welcome />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/search" element={<Search />} />
