@@ -40,11 +40,14 @@ export function DynamicRoute() {
         return;
       }
 
-      // Перевіряємо чи це SEO URL оголошення (містить дефіс і 8 символів після)
-      if (isSeoUrl(`/${dynamicParam}`)) {
-        console.log('✅ Detected SEO URL for listing');
+      // Перевіряємо чи це SEO URL оголошення (містить дефіс і 6-8 символів після)
+      const testUrl = `/${dynamicParam}`;
+      if (isSeoUrl(testUrl)) {
+        console.log('✅ Detected SEO URL for listing:', testUrl);
         setRouteType('listing');
         return;
+      } else {
+        console.log('❌ Not a SEO URL:', testUrl, 'Pattern test result:', /^\/[a-z0-9-]+-[a-zA-Z0-9]{6,8}$/.test(testUrl));
       }
 
       console.log('❌ No match found, showing 404');

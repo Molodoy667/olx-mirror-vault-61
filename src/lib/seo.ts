@@ -77,8 +77,11 @@ export async function getOrCreateSeoUrl(listingId: string, title: string): Promi
     // Если SEO URL не существует, создаем новый
     const slug = generateSlug(title);
     // Используем существующий listing ID (первые 8 символов без дефисов)
-    const seoId = listingId.replace(/-/g, '').substring(0, 8).toUpperCase();
+    const cleanId = listingId.replace(/-/g, '');
+    const seoId = cleanId.length >= 8 ? cleanId.substring(0, 8).toUpperCase() : cleanId.toUpperCase();
     const fullUrl = `/${slug}-${seoId}`;
+    
+    console.log('🔍 Creating SEO URL:', { listingId, slug, seoId, fullUrl });
 
     // Сохраняем в базу данных
     const { error } = await supabase
@@ -155,8 +158,8 @@ export function generateListingUrl(title: string, id: string): string {
  * @deprecated Используйте getListingIdBySeoUrl
  */
 export function extractListingIdFromUrl(url: string): string | null {
-  // Ищем последние 6 символов после последнего дефиса
-  const match = url.match(/-([a-zA-Z0-9]{6})$/);
+  // Ищем последние 6-8 символов после последнего дефиса
+  const match = url.match(/-([a-zA-Z0-9]{6,8})$/);
   return match ? match[1] : null;
 }
 
@@ -164,7 +167,8 @@ export function extractListingIdFromUrl(url: string): string | null {
  * Проверяет, является ли URL SEO-friendly
  */
 export function isSeoUrl(url: string): boolean {
-  return /^\/[a-z0-9-]+-[A-Z0-9]{8}$/.test(url);
+  // Підтримуємо як 6-символьні (старі), так і 8-символьні (нові) SEO ID
+  return /^\/[a-z0-9-]+-[a-zA-Z0-9]{6,8}$/.test(url);
 }
 
 /**
