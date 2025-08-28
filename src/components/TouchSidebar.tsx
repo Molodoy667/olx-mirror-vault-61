@@ -61,6 +61,31 @@ export function TouchSidebar({ isOpen, onClose, onToggle }: TouchSidebarProps) {
     enabled: !!user,
   });
 
+  // Допоміжні функції для отримання даних користувача
+  const getUsernameForDisplay = () => {
+    const username = profile?.username || user?.user_metadata?.username;
+    if (!username) return null;
+    // Видаляємо @ якщо він є на початку
+    return username.startsWith('@') ? username.slice(1) : username;
+  };
+
+  const getUsernameForNavigation = () => {
+    const username = getUsernameForDisplay();
+    return username ? `@${username}` : null;
+  };
+
+  const getDisplayName = () => {
+    return profile?.full_name || 
+           user?.user_metadata?.full_name || 
+           getUsernameForDisplay() || 
+           user?.email?.split('@')[0] || 
+           'Користувач';
+  };
+
+  const getAvatarUsername = () => {
+    return getUsernameForDisplay() || user?.email?.split('@')[0];
+  };
+
   // Handle touch events for swipe gestures and scrolling
   useEffect(() => {
     const sidebar = sidebarRef.current;
@@ -182,7 +207,10 @@ export function TouchSidebar({ isOpen, onClose, onToggle }: TouchSidebarProps) {
     { 
       icon: User, 
       label: 'Мій профіль', 
-      action: () => handleNavigation(profile?.username ? `/profile/@${profile.username}` : user?.user_metadata?.username ? `/profile/@${user.user_metadata.username}` : `/profile/${user?.id}`),
+      action: () => {
+        const usernameNav = getUsernameForNavigation();
+        handleNavigation(usernameNav ? `/profile/${usernameNav}` : `/profile/${user?.id}`);
+      },
       color: 'text-blue-500'
     },
     { 
@@ -269,17 +297,17 @@ export function TouchSidebar({ isOpen, onClose, onToggle }: TouchSidebarProps) {
               <>
                 <GradientAvatar
                   src={profile?.avatar_url || user.user_metadata?.avatar_url}
-                  username={profile?.username || user.user_metadata?.username || user.email?.split('@')[0]}
+                  username={getAvatarUsername()}
                   size="lg"
                   className="border-2 border-primary/20 flex-shrink-0"
                   alt="User Avatar"
                 />
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-foreground truncate">
-                    {profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Користувач'}
+                    {getDisplayName()}
                   </p>
                   <p className="text-sm text-muted-foreground truncate">
-                    {profile?.username ? `@${profile.username}` : user.email}
+                    {getUsernameForDisplay() ? `@${getUsernameForDisplay()}` : user.email}
                   </p>
                 </div>
               </>
