@@ -3,11 +3,7 @@ name: 📱 Build Novado APK
 on:
   push:
     branches: [ main ]
-    paths:
-      - 'src/**'
-      - 'public/**'
-      - 'package.json'
-      - 'capacitor.config.ts'
+  workflow_dispatch:
 
 jobs:
   build-apk:
