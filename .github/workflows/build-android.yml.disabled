@@ -1,0 +1,236 @@
+name: 📱 Build PWA and Android APK
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - 'README*.md'
+      - 'docs/**'
+  workflow_dispatch:
+    inputs:
+      debug:
+        description: 'Enable debug output'
+        required: false
+        default: 'false'
+        type: boolean
+
+jobs:
+  build-pwa:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 📦 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: 📋 Install dependencies
+      run: npm install --legacy-peer-deps
+      
+    - name: 🏗️ Build PWA
+      run: npm run build
+      
+    - name: 📤 Upload PWA build
+      uses: actions/upload-artifact@v4
+      with:
+        name: pwa-build
+        path: dist/
+
+  build-apk:
+    needs: build-pwa
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 📦 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: 📥 Download PWA build
+      uses: actions/download-artifact@v4
+      with:
+        name: pwa-build
+        path: dist/
+        
+    - name: 📋 Install dependencies
+      run: npm install --legacy-peer-deps
+      
+    - name: 🧹 Clean Capacitor cache (if needed)
+      run: |
+        if [ -d "android" ]; then
+          echo "🧹 Cleaning existing Android build..."
+          rm -rf android/app/build/
+          echo "✅ Android build cache cleared"
+        fi
+      
+    - name: ☕ Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+        
+    - name: 🤖 Setup Android SDK
+      uses: android-actions/setup-android@v3
+      
+    - name: 📱 Accept Android SDK licenses
+      run: |
+        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+      
+    - name: 🔧 Setup Gradle
+      uses: gradle/gradle-build-action@v2
+      with:
+        gradle-version: '8.0.2'
+      
+    - name: ⚙️ Initialize Capacitor (if needed)
+      run: |
+        if [ ! -f "capacitor.config.ts" ]; then
+          echo "🔧 Initializing Capacitor..."
+          npx cap init "Novado" "com.novado.app" --web-dir=dist
+        else
+          echo "✅ Capacitor already initialized"
+        fi
+        
+    - name: 🤖 Add Android platform (if needed)
+      run: |
+        if [ ! -d "android" ]; then
+          echo "📱 Adding Android platform..."
+          npx cap add android
+        else
+          echo "✅ Android platform already exists"
+        fi
+      
+    - name: 🔄 Sync with Android
+      run: |
+        echo "🔄 Syncing with Android platform..."
+        npx cap sync android
+      
+    - name: 🔍 Check Android structure
+      run: |
+        echo "📁 Checking android directory structure:"
+        ls -la android/ || echo "❌ android directory not found"
+        echo "📁 Checking gradlew:"
+        ls -la android/gradlew* || echo "❌ gradlew not found"
+        echo "📁 Checking app directory:"
+        ls -la android/app/ || echo "❌ android/app directory not found"
+      
+    - name: 🔧 Create Gradle Wrapper (if missing)
+      run: |
+        cd android
+        if [ ! -f "./gradlew" ]; then
+          echo "🔧 Creating Gradle Wrapper..."
+          
+          # Создаем основные файлы конфигурации
+          echo "📝 Creating configuration files..."
+          
+          # build.gradle
+          echo 'buildscript { ext { compileSdkVersion = 34; targetSdkVersion = 34; minSdkVersion = 22 } dependencies { classpath "com.android.tools.build:gradle:8.0.0" } } apply from: "capacitor.settings.gradle" allprojects { repositories { google(); mavenCentral() } }' > build.gradle
+          
+          # gradle.properties  
+          echo 'org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8' > gradle.properties
+          echo 'android.useAndroidX=true' >> gradle.properties
+          echo 'android.enableJetifier=true' >> gradle.properties
+          
+          # settings.gradle
+          echo 'include ":app"' > settings.gradle
+          echo 'include ":capacitor-cordova-android-plugins"' >> settings.gradle
+          echo 'apply from: "capacitor.settings.gradle"' >> settings.gradle
+          
+          # Инициализируем gradle wrapper
+          echo "🔧 Initializing Gradle Wrapper..."
+          gradle wrapper --gradle-version 8.0.2 --distribution-type all
+          
+          if [ -f "./gradlew" ]; then
+            echo "✅ Gradle Wrapper created successfully!"
+            chmod +x ./gradlew
+          else
+            echo "❌ Failed to create Gradle Wrapper!"
+            exit 1
+          fi
+        else
+          echo "✅ Gradle Wrapper already exists"
+          chmod +x ./gradlew
+        fi
+      
+    - name: 🏗️ Build Android APK
+      run: |
+        cd android
+        
+        echo "🚀 Building APK with gradlew..."
+        ./gradlew assembleDebug --stacktrace --info
+        
+        # Проверяем результат сборки
+        if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
+          echo "✅ APK built successfully!"
+          ls -la app/build/outputs/apk/debug/
+        else
+          echo "❌ APK not found after build!"
+          echo "📁 Checking build outputs:"
+          find app/build -name "*.apk" -type f 2>/dev/null || echo "No APK files found"
+          exit 1
+        fi
+        
+    - name: 📤 Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-apk
+        path: android/app/build/outputs/apk/debug/app-debug.apk
+
+  release:
+    needs: build-apk
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: 📥 Download APK
+      uses: actions/download-artifact@v4
+      with:
+        name: android-apk
+        
+    - name: 📋 Get version
+      id: version
+      run: echo "VERSION=$(date +'%Y.%m.%d-%H%M')" >> $GITHUB_OUTPUT
+      
+    - name: 📝 Rename APK
+      run: mv app-debug.apk novado-v${{ steps.version.outputs.VERSION }}.apk
+      
+    - name: 🚀 Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v${{ steps.version.outputs.VERSION }}
+        name: 📱 Novado v${{ steps.version.outputs.VERSION }}
+        body: |
+          ## 🚀 Автоматична збірка Android APK
+          
+          📅 **Версія**: ${{ steps.version.outputs.VERSION }}  
+          📱 **Платформа**: Android  
+          🔄 **Тип**: Debug Build  
+          
+          ### 📥 Встановлення:
+          1. Завантажте APK файл нижче
+          2. Увімкніть "Невідомі джерела" в налаштуваннях Android
+          3. Встановіть APK файл
+          4. Відкрийте додаток Novado
+          
+          ### 🔄 Автооновлення:
+          - ✅ Додаток автоматично перевіряє оновлення
+          - ✅ PWA технології забезпечують миттєву синхронізацію
+          - ✅ Нові функції з'являються без переустановки APK
+          
+          ### 🛠️ Технічна інформація:
+          - **PWA**: Прогресивне веб-додаток з офлайн підтримкою
+          - **Capacitor**: Нативна обгортка для Android
+          - **Supabase**: Backend та база даних
+          
+        files: |
+          novado-v${{ steps.version.outputs.VERSION }}.apk
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
