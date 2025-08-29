@@ -91,7 +91,7 @@ buildscript {
         kotlin_version = '1.9.10'
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.0.0'
+        classpath 'com.android.tools.build:gradle:8.2.0'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
@@ -129,13 +129,18 @@ project(':capacitor-cordova-android-plugins').projectDir = new File('./capacitor
 apply from: 'capacitor.settings.gradle'
 EOF
 
-        # Create gradle wrapper with correct version
+        # Create gradle wrapper with correct version 8.2
         gradle wrapper --gradle-version 8.2 --distribution-type all
         chmod +x gradlew
         
+        # Force correct version in gradle-wrapper.properties
+        echo "🔧 Ensuring Gradle 8.2 in wrapper properties..."
+        sed -i 's/gradle-[0-9]\+\.[0-9]\+\(\.[0-9]\+\)\?-all\.zip/gradle-8.2-all.zip/g' gradle/wrapper/gradle-wrapper.properties
+        sed -i 's/gradle-[0-9]\+\.[0-9]\+\(\.[0-9]\+\)\?-bin\.zip/gradle-8.2-all.zip/g' gradle/wrapper/gradle-wrapper.properties
+        
         # Verify gradle wrapper version
-        echo "🔍 Checking gradle wrapper version:"
-        cat gradle/wrapper/gradle-wrapper.properties | grep distributionUrl
+        echo "🔍 Final gradle wrapper configuration:"
+        cat gradle/wrapper/gradle-wrapper.properties
         
         echo "✅ Android project configured"
         
@@ -177,13 +182,27 @@ EOF
           echo "✅ app/build.gradle checked"
         fi
         
+    - name: 🔧 Final pre-build checks
+      run: |
+        cd android
+        
+        echo "🔍 Pre-build verification:"
+        echo "Gradle wrapper version:"
+        ./gradlew --version
+        
+        echo "Android project structure:"
+        ls -la app/
+        
+        echo "Gradle wrapper properties:"
+        cat gradle/wrapper/gradle-wrapper.properties
+        
     - name: 🏗️ Build APK with detailed logs
       run: |
         cd android
         
-        echo "🚀 Building APK with detailed logging..."
-        ./gradlew clean
-        ./gradlew assembleDebug --stacktrace --info --debug
+        echo "🚀 Building APK with Gradle 8.2..."
+        ./gradlew clean --stacktrace
+        ./gradlew assembleDebug --stacktrace --info
         
     - name: 📋 Check build results
       run: |
