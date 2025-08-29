@@ -1,0 +1,72 @@
+name: Sign and Release APK
+
+on:
+  workflow_run:
+    workflows: ["Build Android APK"]
+    types:
+      - completed
+    branches: [main]
+
+jobs:
+  sign-apk:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Download APK artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: android-apk
+        path: apk/
+    
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+    
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+    
+    - name: Decode Keystore
+      run: |
+        echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > keystore.jks
+    
+    - name: Sign APK
+      run: |
+        jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
+          -keystore keystore.jks \
+          -storepass "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
+          -keypass "${{ secrets.ANDROID_KEY_PASSWORD }}" \
+          apk/app-release-unsigned.apk \
+          "${{ secrets.ANDROID_KEY_ALIAS }}"
+        
+        # Optimize APK
+        $ANDROID_HOME/build-tools/34.0.0/zipalign -v 4 \
+          apk/app-release-unsigned.apk \
+          apk/app-release-signed.apk
+    
+    - name: Upload signed APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: signed-apk
+        path: apk/app-release-signed.apk
+        retention-days: 90
+    
+    - name: Create Release with Signed APK
+      uses: softprops/action-gh-release@v1
+      with:
+        files: apk/app-release-signed.apk
+        tag_name: v${{ github.run_number }}-signed
+        name: Signed Release v${{ github.run_number }}
+        body: |
+          Signed APK build from commit ${{ github.sha }}
+          
+          - Signed Release APK: app-release-signed.apk
+          
+          This APK is ready for Google Play Store deployment.
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
