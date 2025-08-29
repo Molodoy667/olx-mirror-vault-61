@@ -1,0 +1,187 @@
+name: 📱 Android APK Builder
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout
+      uses: actions/checkout@v4
+      
+    - name: 📦 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: 📋 Install dependencies
+      run: npm install --legacy-peer-deps
+      
+    - name: 🏗️ Build PWA
+      run: npm run build
+      
+    - name: ☕ Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+        
+    - name: 🤖 Setup Android SDK
+      uses: android-actions/setup-android@v3
+      
+    - name: 🔧 Install Gradle manually
+      run: |
+        # Скачиваем Gradle напрямую если сервис недоступен
+        wget -q https://services.gradle.org/distributions/gradle-8.0.2-bin.zip || \
+        curl -sL https://services.gradle.org/distributions/gradle-8.0.2-bin.zip -o gradle-8.0.2-bin.zip || \
+        echo "⚠️ Gradle download failed, will try system gradle"
+        
+        if [ -f "gradle-8.0.2-bin.zip" ]; then
+          unzip -q gradle-8.0.2-bin.zip
+          export PATH=$PWD/gradle-8.0.2/bin:$PATH
+          echo "✅ Gradle 8.0.2 installed manually"
+        fi
+        
+    - name: 📱 Accept SDK licenses
+      run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+      
+    - name: ⚙️ Setup Capacitor
+      run: |
+        # Инициализируем Capacitor если нужно
+        if [ ! -f "capacitor.config.ts" ]; then
+          npx cap init "Novado" "com.novado.app" --web-dir=dist
+        fi
+        
+        # Удаляем существующий Android проект если есть проблемы
+        if [ -d "android" ]; then
+          echo "🧹 Removing existing Android project..."
+          rm -rf android/
+        fi
+        
+        # Создаем Android проект заново
+        npx cap add android
+        npx cap sync android
+        
+    - name: 🔧 Create Gradle wrapper manually
+      run: |
+        cd android
+        
+        # Создаем структуру gradle wrapper
+        mkdir -p gradle/wrapper
+        
+        # Скачиваем gradle-wrapper.jar напрямую
+        echo "📥 Downloading gradle-wrapper.jar..."
+        curl -L -o gradle/wrapper/gradle-wrapper.jar \
+          "https://github.com/gradle/gradle/raw/v8.0.2/gradle/wrapper/gradle-wrapper.jar" || \
+        wget -O gradle/wrapper/gradle-wrapper.jar \
+          "https://github.com/gradle/gradle/raw/v8.0.2/gradle/wrapper/gradle-wrapper.jar" || \
+        echo "❌ Failed to download gradle-wrapper.jar"
+        
+        # Создаем gradle-wrapper.properties
+        cat > gradle/wrapper/gradle-wrapper.properties << 'WRAPPER_EOF'
+distributionBase=GRADLE_USER_HOME
+distributionPath=wrapper/dists
+distributionUrl=https\://services.gradle.org/distributions/gradle-8.0.2-bin.zip
+zipStoreBase=GRADLE_USER_HOME
+zipStorePath=wrapper/dists
+WRAPPER_EOF
+        
+        # Создаем gradlew скрипт
+        cat > gradlew << 'GRADLEW_EOF'
+#!/bin/sh
+
+# Determine the Java command to use to start the JVM.
+if [ -n "$JAVA_HOME" ] ; then
+    if [ -x "$JAVA_HOME/jre/sh/java" ] ; then
+        # IBM's JDK on AIX uses strange locations for the executables
+        JAVACMD="$JAVA_HOME/jre/sh/java"
+    else
+        JAVACMD="$JAVA_HOME/bin/java"
+    fi
+    if [ ! -x "$JAVACMD" ] ; then
+        die "ERROR: JAVA_HOME is set to an invalid directory: $JAVA_HOME"
+    fi
+else
+    JAVACMD="java"
+    which java >/dev/null 2>&1 || die "ERROR: JAVA_HOME is not set and no 'java' command could be found in your PATH."
+fi
+
+# Escape application args
+save () {
+    for i do printf %s\\n "$i" | sed "s/'/'\\\\''/g;1s/^/'/;\$s/\$/' \\\\/" ; done
+    echo " "
+}
+APP_ARGS=$(save "$@")
+
+# Collect all arguments for the java command
+set -- \
+        "-Dorg.gradle.appname=gradlew" \
+        -classpath "$APP_HOME/gradle/wrapper/gradle-wrapper.jar" \
+        org.gradle.wrapper.GradleWrapperMain \
+        "$APP_ARGS"
+
+exec "$JAVACMD" "$@"
+GRADLEW_EOF
+        
+        # Делаем gradlew исполняемым
+        chmod +x gradlew
+        
+        # Создаем базовые конфигурационные файлы
+        printf 'buildscript {\n  ext {\n    compileSdkVersion = 34\n    targetSdkVersion = 34\n    minSdkVersion = 22\n  }\n  dependencies {\n    classpath "com.android.tools.build:gradle:8.0.0"\n  }\n}\n' > build.gradle
+        printf 'apply from: "capacitor.settings.gradle"\n' >> build.gradle
+        printf 'allprojects {\n  repositories {\n    google()\n    mavenCentral()\n  }\n}\n' >> build.gradle
+        
+        printf 'org.gradle.jvmargs=-Xmx2048m\n' > gradle.properties
+        printf 'android.useAndroidX=true\n' >> gradle.properties
+        
+        printf 'include ":app"\n' > settings.gradle
+        printf 'apply from: "capacitor.settings.gradle"\n' >> settings.gradle
+        
+        echo "✅ Gradle wrapper created manually"
+        
+    - name: 🏗️ Build APK
+      run: |
+        cd android
+        ./gradlew assembleDebug --stacktrace
+        
+    - name: 📋 Get version
+      id: version
+      run: echo "VERSION=$(date +'%Y.%m.%d-%H%M')" >> $GITHUB_OUTPUT
+      
+    - name: 📝 Prepare APK
+      run: |
+        mkdir -p release
+        cp android/app/build/outputs/apk/debug/app-debug.apk release/novado-v${{ steps.version.outputs.VERSION }}.apk
+        
+    - name: 🚀 Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v${{ steps.version.outputs.VERSION }}
+        name: 📱 Novado v${{ steps.version.outputs.VERSION }}
+        body: |
+          🚀 **Android APK готовий!**
+          
+          📅 Версія: ${{ steps.version.outputs.VERSION }}
+          📱 Платформа: Android
+          
+          ### 📥 Встановлення:
+          1. Завантажте APK нижче
+          2. Увімкніть "Невідомі джерела" 
+          3. Встановіть APK
+          
+          ### ✨ Функції:
+          - 🎬 Splash screen з анімацією
+          - 📱 Іконка з буквою N
+          - 🇺🇦 Український брендинг
+          - 🔄 Автооновлення
+          
+        files: release/novado-v${{ steps.version.outputs.VERSION }}.apk
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

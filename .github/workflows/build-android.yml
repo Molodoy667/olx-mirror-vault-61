@@ -1,4 +1,4 @@
-name: 📱 Android APK Builder
+name: 📱 Android APK (Ultra Simple)
 
 on:
   push:
@@ -34,99 +34,96 @@ jobs:
     - name: 🤖 Setup Android SDK
       uses: android-actions/setup-android@v3
       
-    - name: 🔧 Install Gradle manually
-      run: |
-        # Скачиваем Gradle напрямую если сервис недоступен
-        wget -q https://services.gradle.org/distributions/gradle-8.0.2-bin.zip || \
-        curl -sL https://services.gradle.org/distributions/gradle-8.0.2-bin.zip -o gradle-8.0.2-bin.zip || \
-        echo "⚠️ Gradle download failed, will try system gradle"
-        
-        if [ -f "gradle-8.0.2-bin.zip" ]; then
-          unzip -q gradle-8.0.2-bin.zip
-          export PATH=$PWD/gradle-8.0.2/bin:$PATH
-          echo "✅ Gradle 8.0.2 installed manually"
-        fi
-        
     - name: 📱 Accept SDK licenses
       run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
       
+    - name: 🔧 Install Gradle
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gradle
+        gradle --version
+        
     - name: ⚙️ Setup Capacitor
       run: |
-        npx cap init "Novado" "com.novado.app" --web-dir=dist || echo "Already initialized"
-        npx cap add android || echo "Platform already exists"
+        # Полная очистка и пересоздание
+        rm -rf android/ node_modules/.cache/
+        
+        # Инициализация
+        npx cap init "Novado" "com.novado.app" --web-dir=dist
+        npx cap add android
         npx cap sync android
         
-    - name: 🔧 Create Gradle files
+    - name: 🔧 Fix Android project
       run: |
         cd android
         
-        # Create build.gradle (простая версия)
-        printf 'buildscript {\n  ext {\n    compileSdkVersion = 34\n    targetSdkVersion = 34\n    minSdkVersion = 22\n  }\n  dependencies {\n    classpath "com.android.tools.build:gradle:8.0.0"\n  }\n}\n' > build.gradle
-        printf 'apply from: "capacitor.settings.gradle"\n' >> build.gradle
-        printf 'allprojects {\n  repositories {\n    google()\n    mavenCentral()\n  }\n}\n' >> build.gradle
+        # Создаем правильный gradlew wrapper
+        gradle wrapper --gradle-version 8.0.2 --distribution-type bin
         
-        # Create gradle.properties
-        printf 'org.gradle.jvmargs=-Xmx2048m\n' > gradle.properties
-        printf 'android.useAndroidX=true\n' >> gradle.properties
-        printf 'android.enableJetifier=true\n' >> gradle.properties
+        # Проверяем что создалось
+        echo "📁 Gradle wrapper files:"
+        ls -la gradlew* gradle/wrapper/ 2>/dev/null || echo "Some files missing"
         
-        # Create settings.gradle
-        printf 'include ":app"\n' > settings.gradle
-        printf 'include ":capacitor-cordova-android-plugins"\n' >> settings.gradle
-        printf 'apply from: "capacitor.settings.gradle"\n' >> settings.gradle
+        # Убеждаемся что gradlew исполняемый
+        chmod +x gradlew
         
-        # Create gradle wrapper (try multiple approaches)
-        if command -v gradle >/dev/null 2>&1; then
-          gradle wrapper --gradle-version 8.0.2 || gradle wrapper || echo "Wrapper creation failed"
-        else
-          echo "⚠️ Gradle not found, trying alternative approach"
-        fi
-        
-        # Ensure gradlew exists and is executable
-        if [ -f "gradlew" ]; then
-          chmod +x gradlew
-          echo "✅ Gradle wrapper ready"
-        else
-          echo "❌ Gradle wrapper not created"
-        fi
+        # Тестируем gradlew
+        ./gradlew --version || echo "gradlew test failed"
         
     - name: 🏗️ Build APK
       run: |
         cd android
-        ./gradlew assembleDebug --stacktrace
+        
+        echo "🚀 Building APK..."
+        ./gradlew assembleDebug --stacktrace --info
+        
+        # Проверяем результат
+        if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
+          echo "✅ APK built successfully!"
+          ls -la app/build/outputs/apk/debug/
+          du -sh app/build/outputs/apk/debug/app-debug.apk
+        else
+          echo "❌ APK not found!"
+          find . -name "*.apk" -type f 2>/dev/null || echo "No APK files found"
+          exit 1
+        fi
         
     - name: 📋 Get version
       id: version
       run: echo "VERSION=$(date +'%Y.%m.%d-%H%M')" >> $GITHUB_OUTPUT
       
-    - name: 📝 Prepare APK
-      run: |
-        mkdir -p release
-        cp android/app/build/outputs/apk/debug/app-debug.apk release/novado-v${{ steps.version.outputs.VERSION }}.apk
-        
     - name: 🚀 Create Release
       uses: softprops/action-gh-release@v1
       with:
         tag_name: v${{ steps.version.outputs.VERSION }}
         name: 📱 Novado v${{ steps.version.outputs.VERSION }}
         body: |
-          🚀 **Android APK готовий!**
+          📱 **Novado Android APK готовий!**
           
           📅 Версія: ${{ steps.version.outputs.VERSION }}
           📱 Платформа: Android
+          🏷️ Назва програми: **Novado**
           
           ### 📥 Встановлення:
           1. Завантажте APK нижче
-          2. Увімкніть "Невідомі джерела" 
-          3. Встановіть APK
+          2. Увімкніть "Невідомі джерела" в налаштуваннях Android
+          3. Встановіть APK файл
+          4. Відкрийте додаток **Novado**
           
-          ### ✨ Функції:
-          - 🎬 Splash screen з анімацією
-          - 📱 Іконка з буквою N
-          - 🇺🇦 Український брендинг
-          - 🔄 Автооновлення
+          ### ✨ Функції додатку:
+          - 🎬 Красивий splash screen з анімацією
+          - 📱 Іконка з буквою N у градієнті
+          - 🇺🇦 Слоган: "Безліч оголошень чекають на тебе"
+          - 🔄 Автооновлення через PWA технології
+          - 🌐 Повна функціональність веб-версії
+          - 📱 Нативне поведінка Android додатку
           
-        files: release/novado-v${{ steps.version.outputs.VERSION }}.apk
+          ### 🔄 Автооновлення:
+          - Додаток автоматично перевіряє оновлення
+          - Нові функції з'являються без переустановки
+          - Синхронізація з веб-версією
+          
+        files: android/app/build/outputs/apk/debug/app-debug.apk
         draft: false
         prerelease: false
       env:
