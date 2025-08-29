@@ -48,13 +48,13 @@ jobs:
     - name: 📱 Accept SDK licenses
       run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
       
-    - name: 🔧 Setup Gradle
+    - name: 🔧 Setup Gradle 8.2
       run: |
-        # Install Gradle
-        wget -q https://services.gradle.org/distributions/gradle-8.0.2-bin.zip
-        unzip -q gradle-8.0.2-bin.zip
-        export PATH=$PWD/gradle-8.0.2/bin:$PATH
-        echo "$PWD/gradle-8.0.2/bin" >> $GITHUB_PATH
+        # Install Gradle 8.2 (minimum required)
+        wget -q https://services.gradle.org/distributions/gradle-8.2-bin.zip
+        unzip -q gradle-8.2-bin.zip
+        export PATH=$PWD/gradle-8.2/bin:$PATH
+        echo "$PWD/gradle-8.2/bin" >> $GITHUB_PATH
         gradle --version
         
     - name: ⚙️ Create Capacitor Android project
@@ -129,9 +129,13 @@ project(':capacitor-cordova-android-plugins').projectDir = new File('./capacitor
 apply from: 'capacitor.settings.gradle'
 EOF
 
-        # Create gradle wrapper
-        gradle wrapper --gradle-version 8.0.2 --distribution-type all
+        # Create gradle wrapper with correct version
+        gradle wrapper --gradle-version 8.2 --distribution-type all
         chmod +x gradlew
+        
+        # Verify gradle wrapper version
+        echo "🔍 Checking gradle wrapper version:"
+        cat gradle/wrapper/gradle-wrapper.properties | grep distributionUrl
         
         echo "✅ Android project configured"
         

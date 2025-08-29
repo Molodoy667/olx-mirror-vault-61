@@ -1,0 +1,108 @@
+name: 📱 Android APK (Minimal)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout
+      uses: actions/checkout@v4
+      
+    - name: 📦 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: 📋 Install dependencies
+      run: npm install --legacy-peer-deps
+      
+    - name: 🏗️ Build PWA
+      run: npm run build
+      
+    - name: ☕ Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+        
+    - name: 🤖 Setup Android SDK
+      uses: android-actions/setup-android@v3
+      
+    - name: 🔧 Setup Gradle 8.2
+      uses: gradle/gradle-build-action@v2
+      with:
+        gradle-version: '8.2'
+        
+    - name: 📱 Accept licenses
+      run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
+      
+    - name: 📱 Create Android project
+      run: |
+        npx cap add android
+        npx cap sync android
+        
+    - name: 🔧 Fix Gradle wrapper version
+      run: |
+        cd android
+        
+        # Update gradle wrapper to 8.2
+        sed -i 's/gradle-[0-9]\+\.[0-9]\+\(\.[0-9]\+\)\?/gradle-8.2/g' gradle/wrapper/gradle-wrapper.properties
+        
+        # Verify the change
+        echo "🔍 Gradle wrapper configuration:"
+        cat gradle/wrapper/gradle-wrapper.properties
+        
+        chmod +x gradlew
+        
+    - name: 🏗️ Build APK
+      run: |
+        cd android
+        ./gradlew clean assembleDebug --stacktrace
+        
+    - name: 📦 Package APK
+      run: |
+        if [ -f "android/app/build/outputs/apk/debug/app-debug.apk" ]; then
+          cp android/app/build/outputs/apk/debug/app-debug.apk novado-minimal.apk
+          echo "✅ APK ready: novado-minimal.apk"
+          ls -la novado-minimal.apk
+        else
+          echo "❌ APK not found"
+          exit 1
+        fi
+        
+    - name: 📋 Get version
+      id: version
+      run: echo "VERSION=$(date +'%Y.%m.%d-%H%M')-minimal" >> $GITHUB_OUTPUT
+      
+    - name: 🚀 Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v${{ steps.version.outputs.VERSION }}
+        name: 📱 Novado v${{ steps.version.outputs.VERSION }} (Minimal)
+        body: |
+          📱 **Novado Android APK (Minimal Build)**
+          
+          📅 Версія: ${{ steps.version.outputs.VERSION }}
+          📱 Назва програми: **Novado**
+          🔧 Gradle версія: 8.2 (виправлено!)
+          
+          ### 📥 Встановлення:
+          1. Завантажте APK нижче
+          2. Увімкніть "Невідомі джерела"
+          3. Встановіть APK
+          4. Відкрийте **Novado**
+          
+          ### ✨ Функції:
+          - 🎬 Splash screen з анімацією
+          - 📱 Іконка з буквою N
+          - 🇺🇦 "Безліч оголошень чекають на тебе"
+          - 🔄 Автооновлення
+          
+        files: novado-minimal.apk
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
