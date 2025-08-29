@@ -16,13 +16,13 @@ import * as LucideIcons from "lucide-react";
 // Icon mapping function
 const getIconComponent = (iconName: string | null) => {
   if (!iconName) return LucideIcons.Package;
-  const IconComponent = (LucideIcons as unknown)[iconName];
+  const IconComponent = (LucideIcons as Record<string, unknown>)[iconName];
   return IconComponent || LucideIcons.Package;
 };
 
 export function CategorySlider() {
   const navigate = useNavigate();
-  const [api, setApi] = useState<any>();
+  const [api, setApi] = useState<unknown>();
   const [current, setCurrent] = useState(0);
   const [count, setCount] = useState(0);
   const { data: categories, isLoading } = useCategories();

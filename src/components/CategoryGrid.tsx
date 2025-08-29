@@ -32,7 +32,7 @@ export function CategoryGrid() {
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
           {categories?.map((category) => {
             // Dynamically get the icon component
-            const IconComponent = category.icon ? (Icons as unknown)[category.icon] : Icons.Package;
+            const IconComponent = category.icon ? (Icons as Record<string, unknown>)[category.icon] : Icons.Package;
             
             return (
               <Link

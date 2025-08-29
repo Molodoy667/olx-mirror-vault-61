@@ -23,7 +23,7 @@ import { ChevronRight, Grid3x3 } from "lucide-react";
 // Icon mapping function
 const getIconComponent = (iconName: string | null) => {
   if (!iconName) return LucideIcons.Package;
-  const IconComponent = (LucideIcons as unknown)[iconName];
+  const IconComponent = (LucideIcons as Record<string, unknown>)[iconName];
   return IconComponent || LucideIcons.Package;
 };
 
@@ -49,7 +49,7 @@ export function CategoriesSection() {
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [showSubcategories, setShowSubcategories] = useState(false);
-  const [api, setApi] = useState<any>();
+  const [api, setApi] = useState<unknown>();
   const { data: categories, isLoading } = useCategoriesWithSubcategories();
 
   const handleCategoryClick = (category: Category) => {
