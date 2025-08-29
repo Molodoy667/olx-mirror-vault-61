@@ -62,26 +62,39 @@ jobs:
     - name: 🤖 Setup Android SDK
       uses: android-actions/setup-android@v3
       
-    - name: ⚙️ Initialize Capacitor (if needed)
+    - name: ⚙️ Initialize Capacitor
       run: |
-        if [ ! -f "capacitor.config.ts" ]; then
-          npx cap init "Novado" "com.novado.app" --web-dir=dist
-        fi
+        npx cap init "Novado" "com.novado.app" --web-dir=dist
         
     - name: 🤖 Add Android platform
-      run: |
-        if [ ! -d "android" ]; then
-          npx cap add android
-        fi
+      run: npx cap add android
       
     - name: 🔄 Sync with Android
       run: npx cap sync android
       
+    - name: 🔍 Check Android structure
+      run: |
+        echo "📁 Checking android directory structure:"
+        ls -la android/
+        echo "📁 Checking gradlew:"
+        ls -la android/gradlew* || echo "❌ gradlew not found"
+      
     - name: 🏗️ Build Android APK
       run: |
         cd android
-        chmod +x ./gradlew
-        ./gradlew assembleDebug
+        if [ -f "./gradlew" ]; then
+          chmod +x ./gradlew
+          ./gradlew assembleDebug
+        else
+          echo "❌ gradlew not found, trying alternative build"
+          # Попробуем через gradle wrapper
+          if command -v gradle &> /dev/null; then
+            gradle assembleDebug
+          else
+            echo "❌ Neither gradlew nor gradle found"
+            exit 1
+          fi
+        fi
         
     - name: 📤 Upload APK
       uses: actions/upload-artifact@v4

@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useState, useEffect } from "react";
 import { ScrollToTopRouter } from "@/components/ScrollToTopRouter";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { UserBottomPanel } from "@/components/UserBottomPanel";
@@ -11,6 +11,7 @@ import { AdminRoute } from "@/components/AdminRoute";
 import { Layout } from "@/components/Layout";
 import { lazyWithRetry } from "@/components/LazyRetry";
 import { DynamicRoute } from "@/components/DynamicRoute";
+import { SplashScreen } from "@/components/SplashScreen";
 
 // Lazy load all pages for better performance
 const Home = lazy(() => import("./pages/Home"));
@@ -66,16 +67,40 @@ const PageFallback = () => (
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <ErrorBoundary>
-    <QueryClientProvider client={queryClient}>
-      <Toaster />
-      <BrowserRouter>
-        <AuthProvider>
-          <ScrollToTopRouter />
-          <Layout>
-            <Suspense fallback={<PageFallback />}>
-              <Routes>
+const App = () => {
+  const [showSplash, setShowSplash] = useState(() => {
+    // Показываем splash только при первом запуске или в мобильном приложении
+    const isFirstVisit = !localStorage.getItem('novado-visited');
+    const isMobileApp = window.matchMedia('(display-mode: standalone)').matches || 
+                       window.navigator.standalone || 
+                       document.referrer.includes('android-app://');
+    
+    if (isFirstVisit) {
+      localStorage.setItem('novado-visited', 'true');
+      return true;
+    }
+    
+    return isMobileApp;
+  });
+
+  const handleSplashComplete = () => {
+    setShowSplash(false);
+  };
+
+  if (showSplash) {
+    return <SplashScreen onComplete={handleSplashComplete} duration={3000} />;
+  }
+
+  return (
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <Toaster />
+        <BrowserRouter>
+          <AuthProvider>
+            <ScrollToTopRouter />
+            <Layout>
+              <Suspense fallback={<PageFallback />}>
+                <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/home" element={<Home />} />
                 <Route path="/auth" element={<Auth />} />
@@ -137,6 +162,7 @@ const App = () => (
       </BrowserRouter>
     </QueryClientProvider>
   </ErrorBoundary>
-);
+  );
+};
 
 export default App;

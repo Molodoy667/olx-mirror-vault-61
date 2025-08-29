@@ -1,21 +1,44 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Background -->
-  <rect width="512" height="512" rx="96" fill="#3B82F6"/>
+  <!-- Background Gradient -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1E40AF;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="nGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#E5E7EB;stop-opacity:1" />
+    </linearGradient>
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="4" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.3"/>
+    </filter>
+  </defs>
   
-  <!-- Main Icon - Shopping Bag -->
-  <path d="M128 192C128 192 128 160 128 144C128 108.654 156.654 80 192 80H320C355.346 80 384 108.654 384 144V192" stroke="white" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
-  <rect x="96" y="192" width="320" height="240" rx="16" fill="white" fill-opacity="0.9"/>
-  <rect x="96" y="192" width="320" height="240" rx="16" stroke="white" stroke-width="8"/>
+  <!-- Background with rounded corners -->
+  <rect width="512" height="512" rx="96" fill="url(#bgGradient)"/>
   
-  <!-- Handle -->
-  <path d="M176 240V224C176 215.163 183.163 208 192 208H320C328.837 208 336 215.163 336 224V240" stroke="#3B82F6" stroke-width="16" stroke-linecap="round"/>
+  <!-- Decorative circles -->
+  <circle cx="128" cy="128" r="32" fill="white" opacity="0.1"/>
+  <circle cx="384" cy="128" r="24" fill="white" opacity="0.15"/>
+  <circle cx="384" cy="384" r="28" fill="white" opacity="0.1"/>
+  <circle cx="128" cy="384" r="20" fill="white" opacity="0.2"/>
   
-  <!-- Novado Text -->
-  <text x="256" y="380" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="#3B82F6" text-anchor="middle">Novado</text>
+  <!-- Main Letter N with shadow -->
+  <g filter="url(#shadow)">
+    <path d="M180 140 L180 372 L220 372 L220 240 L292 372 L332 372 L332 140 L292 140 L292 272 L220 140 L180 140 Z" 
+          fill="url(#nGradient)" 
+          stroke="white" 
+          stroke-width="2"/>
+  </g>
   
-  <!-- Ukrainian Flag Colors -->
-  <rect x="144" y="280" width="80" height="8" fill="#005BBB"/>
-  <rect x="144" y="296" width="80" height="8" fill="#FFD500"/>
-  <rect x="288" y="280" width="80" height="8" fill="#005BBB"/>
-  <rect x="288" y="296" width="80" height="8" fill="#FFD500"/>
+  <!-- Ukrainian accent -->
+  <rect x="180" y="390" width="152" height="6" rx="3" fill="#FFD500"/>
+  <rect x="180" y="400" width="152" height="6" rx="3" fill="#005BBB"/>
+  
+  <!-- Subtle shine effect -->
+  <path d="M180 140 L220 140 L220 200 L180 160 Z" fill="white" opacity="0.3"/>
+  <circle cx="200" cy="160" r="8" fill="white" opacity="0.4"/>
+  
+  <!-- Brand text -->
+  <text x="256" y="450" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="white" text-anchor="middle" opacity="0.9">NOVADO</text>
 </svg>
