@@ -1,20 +1,27 @@
-name: 📱 Android APK (Minimal)
+name: 📱 Build Novado APK
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'package.json'
+      - 'capacitor.config.ts'
 
 jobs:
-  build:
+  build-apk:
     runs-on: ubuntu-latest
     
     steps:
-    - name: 📥 Checkout
+    - name: 📥 Checkout code
       uses: actions/checkout@v4
       
     - name: 📦 Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '18'
+        cache: 'npm'
         
     - name: 📋 Install dependencies
       run: npm install --legacy-peer-deps
@@ -36,72 +43,66 @@ jobs:
       with:
         gradle-version: '8.2'
         
-    - name: 📱 Accept licenses
+    - name: 📱 Accept Android licenses
       run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
       
-    - name: 📱 Create Android project
+    - name: 📱 Install Android build tools
+      run: |
+        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "build-tools;34.0.0"
+        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-34"
+        
+    - name: ⚙️ Create Android project
       run: |
         npx cap add android
         npx cap sync android
         
-    - name: 🔧 Fix Gradle wrapper version
+    - name: 🔧 Update Gradle wrapper to 8.2
       run: |
         cd android
         
-        # Update gradle wrapper to 8.2
-        sed -i 's/gradle-[0-9]\+\.[0-9]\+\(\.[0-9]\+\)\?/gradle-8.2/g' gradle/wrapper/gradle-wrapper.properties
-        
-        # Verify the change
-        echo "🔍 Gradle wrapper configuration:"
-        cat gradle/wrapper/gradle-wrapper.properties
+        # Update gradle-wrapper.properties to use Gradle 8.2
+        echo "distributionBase=GRADLE_USER_HOME" > gradle/wrapper/gradle-wrapper.properties
+        echo "distributionPath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
+        echo "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.2-all.zip" >> gradle/wrapper/gradle-wrapper.properties
+        echo "zipStoreBase=GRADLE_USER_HOME" >> gradle/wrapper/gradle-wrapper.properties
+        echo "zipStorePath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
         
         chmod +x gradlew
+        
+        echo "✅ Gradle wrapper updated to 8.2"
         
     - name: 🏗️ Build APK
       run: |
         cd android
-        ./gradlew clean assembleDebug --stacktrace
-        
-    - name: 📦 Package APK
-      run: |
-        if [ -f "android/app/build/outputs/apk/debug/app-debug.apk" ]; then
-          cp android/app/build/outputs/apk/debug/app-debug.apk novado-minimal.apk
-          echo "✅ APK ready: novado-minimal.apk"
-          ls -la novado-minimal.apk
-        else
-          echo "❌ APK not found"
-          exit 1
-        fi
+        ./gradlew assembleDebug
         
     - name: 📋 Get version
       id: version
-      run: echo "VERSION=$(date +'%Y.%m.%d-%H%M')-minimal" >> $GITHUB_OUTPUT
+      run: echo "VERSION=$(date +'%Y.%m.%d.%H%M')" >> $GITHUB_OUTPUT
       
     - name: 🚀 Create Release
       uses: softprops/action-gh-release@v1
       with:
         tag_name: v${{ steps.version.outputs.VERSION }}
-        name: 📱 Novado v${{ steps.version.outputs.VERSION }} (Minimal)
+        name: 📱 Novado v${{ steps.version.outputs.VERSION }}
         body: |
-          📱 **Novado Android APK (Minimal Build)**
+          📱 **Novado Android APK**
           
           📅 Версія: ${{ steps.version.outputs.VERSION }}
-          📱 Назва програми: **Novado**
-          🔧 Gradle версія: 8.2 (виправлено!)
+          📱 Назва: **Novado**
+          🇺🇦 Слоган: "Безліч оголошень чекають на тебе"
           
           ### 📥 Встановлення:
-          1. Завантажте APK нижче
-          2. Увімкніть "Невідомі джерела"
+          1. Завантажте APK
+          2. Увімкніть "Невідомі джерела" 
           3. Встановіть APK
-          4. Відкрийте **Novado**
           
           ### ✨ Функції:
           - 🎬 Splash screen з анімацією
           - 📱 Іконка з буквою N
-          - 🇺🇦 "Безліч оголошень чекають на тебе"
           - 🔄 Автооновлення
           
-        files: novado-minimal.apk
+        files: android/app/build/outputs/apk/debug/app-debug.apk
         draft: false
         prerelease: false
       env:

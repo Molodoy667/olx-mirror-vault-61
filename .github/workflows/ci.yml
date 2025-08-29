@@ -1,12 +1,6 @@
-name: CI/CD Pipeline
+name: 🧪 Code Quality Check
 
 on:
-  push:
-    branches: [ main ]
-    paths:
-      - 'src/**'
-      - 'package.json'
-      - 'package-lock.json'
   workflow_dispatch:
 
 jobs:
