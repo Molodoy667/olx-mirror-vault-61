@@ -108,6 +108,90 @@ else
     echo "❌ Java не найдена (нужна для сборки APK)"
 fi
 
+# Проверка Gradle
+echo ""
+echo "🔧 Gradle версия:"
+if command -v gradle &> /dev/null; then
+    gradle --version | head -3
+else
+    echo "❌ Gradle не найден (нужен для создания wrapper)"
+fi
+
+# Создание Gradle Wrapper если отсутствует
+if [ -d "android" ] && [ ! -f "android/gradlew" ]; then
+    echo ""
+    echo "🔧 Создание Gradle Wrapper..."
+    cd android
+    
+    # Создаем необходимые файлы если их нет
+    if [ ! -f "build.gradle" ]; then
+        echo "📝 Создание build.gradle..."
+        cat > build.gradle << 'EOF'
+buildscript {
+    ext {
+        compileSdkVersion = 34
+        targetSdkVersion = 34
+        minSdkVersion = 22
+        cordovaAndroidVersion = '10.1.1'
+        kotlin_version = '1.9.10'
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.0.0'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+apply from: "capacitor.settings.gradle"
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}
+EOF
+    fi
+    
+    if [ ! -f "gradle.properties" ]; then
+        echo "📝 Создание gradle.properties..."
+        cat > gradle.properties << 'EOF'
+org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+android.useAndroidX=true
+android.enableJetifier=true
+EOF
+    fi
+    
+    if [ ! -f "settings.gradle" ]; then
+        echo "📝 Создание settings.gradle..."
+        cat > settings.gradle << 'EOF'
+include ':app'
+include ':capacitor-cordova-android-plugins'
+project(':capacitor-cordova-android-plugins').projectDir = new File('./capacitor-cordova-android-plugins/')
+apply from: 'capacitor.settings.gradle'
+EOF
+    fi
+    
+    if command -v gradle &> /dev/null; then
+        echo "🔧 Инициализация Gradle Wrapper..."
+        gradle wrapper --gradle-version 8.0.2 --distribution-type all
+        
+        if [ -f "./gradlew" ]; then
+            chmod +x ./gradlew
+            echo "✅ Gradle Wrapper создан успешно!"
+        else
+            echo "❌ Не удалось создать Gradle Wrapper"
+        fi
+    else
+        echo "❌ Gradle не найден, не могу создать wrapper"
+    fi
+    
+    cd ..
+fi
+
 echo ""
 echo "🎯 РЕЗУЛЬТАТ:"
 echo "============="
@@ -120,6 +204,9 @@ if [ -d "android" ] && [ -f "android/gradlew" ]; then
     echo "🚀 Готово к сборке APK!"
     echo "Для сборки APK запустите:"
     echo "cd android && ./gradlew assembleDebug"
+elif [ -d "android" ]; then
+    echo "⚠️ Android проект создан, но Gradle wrapper отсутствует"
+    echo "Попробуйте запустить этот скрипт еще раз после установки Gradle"
 else
     echo "❌ Есть проблемы с настройкой"
     echo "Проверьте логи выше"

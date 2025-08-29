@@ -74,6 +74,11 @@ jobs:
       run: |
         yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
       
+    - name: 🔧 Setup Gradle
+      uses: gradle/gradle-build-action@v2
+      with:
+        gradle-version: '8.0.2'
+      
     - name: ⚙️ Initialize Capacitor (if needed)
       run: |
         if [ ! -f "capacitor.config.ts" ]; then
@@ -106,35 +111,94 @@ jobs:
         echo "📁 Checking app directory:"
         ls -la android/app/ || echo "❌ android/app directory not found"
       
-    - name: 🔧 Fix gradlew permissions
+    - name: 🔧 Create Gradle Wrapper (if missing)
       run: |
-        if [ -f "android/gradlew" ]; then
-          echo "🔧 Setting gradlew permissions..."
-          chmod +x android/gradlew
-          echo "✅ gradlew permissions set"
+        cd android
+        if [ ! -f "./gradlew" ]; then
+          echo "🔧 Creating Gradle Wrapper..."
+          
+          # Создаем build.gradle если его нет
+          if [ ! -f "build.gradle" ]; then
+            echo "📝 Creating build.gradle..."
+            cat > build.gradle << 'EOF'
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+
+buildscript {
+    ext {
+        compileSdkVersion = 34
+        targetSdkVersion = 34
+        minSdkVersion = 22
+        cordovaAndroidVersion = '10.1.1'
+        kotlin_version = '1.9.10'
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.0.0'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        // NOTE: Do not place your application dependencies here; they belong
+        // in the individual module build.gradle files
+    }
+}
+
+apply from: "capacitor.settings.gradle"
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}
+EOF
+          fi
+          
+          # Создаем gradle.properties если его нет
+          if [ ! -f "gradle.properties" ]; then
+            echo "📝 Creating gradle.properties..."
+            cat > gradle.properties << 'EOF'
+# Project-wide Gradle settings.
+org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+android.useAndroidX=true
+android.enableJetifier=true
+EOF
+          fi
+          
+          # Создаем settings.gradle если его нет
+          if [ ! -f "settings.gradle" ]; then
+            echo "📝 Creating settings.gradle..."
+            cat > settings.gradle << 'EOF'
+include ':app'
+include ':capacitor-cordova-android-plugins'
+project(':capacitor-cordova-android-plugins').projectDir = new File('./capacitor-cordova-android-plugins/')
+
+apply from: 'capacitor.settings.gradle'
+EOF
+          fi
+          
+          # Инициализируем gradle wrapper
+          echo "🔧 Initializing Gradle Wrapper..."
+          gradle wrapper --gradle-version 8.0.2 --distribution-type all
+          
+          if [ -f "./gradlew" ]; then
+            echo "✅ Gradle Wrapper created successfully!"
+            chmod +x ./gradlew
+          else
+            echo "❌ Failed to create Gradle Wrapper!"
+            exit 1
+          fi
         else
-          echo "❌ gradlew not found, will try alternative build"
+          echo "✅ Gradle Wrapper already exists"
+          chmod +x ./gradlew
         fi
       
     - name: 🏗️ Build Android APK
       run: |
         cd android
         
-        # Проверяем наличие gradlew
-        if [ -f "./gradlew" ]; then
-          echo "🚀 Building APK with gradlew..."
-          ./gradlew assembleDebug --stacktrace
-        elif [ -f "gradlew.bat" ]; then
-          echo "🚀 Building APK with gradlew.bat..."
-          ./gradlew.bat assembleDebug --stacktrace
-        else
-          echo "❌ No gradle wrapper found!"
-          echo "📁 Contents of android directory:"
-          ls -la
-          echo "🔍 Searching for gradle files:"
-          find . -name "*gradle*" -type f
-          exit 1
-        fi
+        echo "🚀 Building APK with gradlew..."
+        ./gradlew assembleDebug --stacktrace --info
         
         # Проверяем результат сборки
         if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
@@ -143,7 +207,7 @@ jobs:
         else
           echo "❌ APK not found after build!"
           echo "📁 Checking build outputs:"
-          find app/build -name "*.apk" -type f || echo "No APK files found"
+          find app/build -name "*.apk" -type f 2>/dev/null || echo "No APK files found"
           exit 1
         fi
         

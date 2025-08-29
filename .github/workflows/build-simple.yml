@@ -42,6 +42,11 @@ jobs:
       run: |
         yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
       
+    - name: 🔧 Setup Gradle
+      uses: gradle/gradle-build-action@v2
+      with:
+        gradle-version: '8.0.2'
+      
     - name: 🧹 Force clean (if requested)
       if: ${{ github.event.inputs.force_rebuild == 'true' }}
       run: |
@@ -84,31 +89,80 @@ jobs:
         echo "🔧 Gradlew files:"
         ls -la android/gradlew* 2>/dev/null || echo "❌ gradlew not found"
       
-    - name: 🔧 Fix permissions and build
+    - name: 🔧 Create Gradle Wrapper and build
       run: |
         cd android
         
-        # Убеждаемся что gradlew существует и имеет права
-        if [ -f "./gradlew" ]; then
-          echo "🔧 Setting gradlew permissions..."
-          chmod +x ./gradlew
+        # Создаем gradle wrapper если его нет
+        if [ ! -f "./gradlew" ]; then
+          echo "🔧 Creating missing Gradle Wrapper..."
           
-          echo "🚀 Building APK..."
-          ./gradlew assembleDebug --stacktrace --info
-          
-          echo "✅ Build completed, checking results..."
-          if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
-            echo "✅ APK built successfully!"
-            ls -la app/build/outputs/apk/debug/
-          else
-            echo "❌ APK not found!"
-            find app/build -name "*.apk" -type f 2>/dev/null || echo "No APK files found anywhere"
-            exit 1
+          # Создаем необходимые конфигурационные файлы
+          if [ ! -f "build.gradle" ]; then
+            cat > build.gradle << 'EOF'
+buildscript {
+    ext {
+        compileSdkVersion = 34
+        targetSdkVersion = 34
+        minSdkVersion = 22
+        cordovaAndroidVersion = '10.1.1'
+        kotlin_version = '1.9.10'
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.0.0'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+apply from: "capacitor.settings.gradle"
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}
+EOF
           fi
+          
+          if [ ! -f "gradle.properties" ]; then
+            cat > gradle.properties << 'EOF'
+org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+android.useAndroidX=true
+android.enableJetifier=true
+EOF
+          fi
+          
+          if [ ! -f "settings.gradle" ]; then
+            cat > settings.gradle << 'EOF'
+include ':app'
+include ':capacitor-cordova-android-plugins'
+project(':capacitor-cordova-android-plugins').projectDir = new File('./capacitor-cordova-android-plugins/')
+apply from: 'capacitor.settings.gradle'
+EOF
+          fi
+          
+          # Создаем gradle wrapper
+          gradle wrapper --gradle-version 8.0.2 --distribution-type all
+        fi
+        
+        # Убеждаемся что gradlew имеет права на выполнение
+        chmod +x ./gradlew
+        
+        echo "🚀 Building APK..."
+        ./gradlew assembleDebug --stacktrace --info
+        
+        echo "✅ Build completed, checking results..."
+        if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
+          echo "✅ APK built successfully!"
+          ls -la app/build/outputs/apk/debug/
         else
-          echo "❌ gradlew not found!"
-          echo "📁 Contents of android directory:"
-          ls -la
+          echo "❌ APK not found!"
+          find app/build -name "*.apk" -type f 2>/dev/null || echo "No APK files found anywhere"
           exit 1
         fi
         
