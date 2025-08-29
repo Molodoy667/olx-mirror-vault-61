@@ -1,0 +1,157 @@
+name: 📱 Simple APK Build (Fallback)
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_rebuild:
+        description: 'Force rebuild Android project'
+        required: false
+        default: 'false'
+        type: boolean
+
+jobs:
+  build-simple:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 📦 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: 📋 Install dependencies
+      run: npm install --legacy-peer-deps
+      
+    - name: 🏗️ Build PWA
+      run: npm run build
+      
+    - name: ☕ Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+        
+    - name: 🤖 Setup Android SDK
+      uses: android-actions/setup-android@v3
+      
+    - name: 📱 Accept Android SDK licenses
+      run: |
+        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+      
+    - name: 🧹 Force clean (if requested)
+      if: ${{ github.event.inputs.force_rebuild == 'true' }}
+      run: |
+        echo "🧹 Force cleaning Android project..."
+        rm -rf android/
+        echo "✅ Android project removed"
+      
+    - name: ⚙️ Initialize Capacitor
+      run: |
+        echo "🔧 Initializing Capacitor..."
+        npx cap init "Novado" "com.novado.app" --web-dir=dist
+        echo "✅ Capacitor initialized"
+        
+    - name: 📱 Add Android platform
+      run: |
+        echo "📱 Adding Android platform..."
+        npx cap add android
+        echo "✅ Android platform added"
+      
+    - name: 🔄 Sync with Android
+      run: |
+        echo "🔄 Syncing with Android..."
+        npx cap sync android
+        echo "✅ Sync completed"
+      
+    - name: 🔍 Detailed diagnostics
+      run: |
+        echo "📁 Project structure:"
+        ls -la
+        echo ""
+        echo "📱 Android directory:"
+        ls -la android/ || echo "❌ android directory not found"
+        echo ""
+        echo "🔧 Gradle files:"
+        find android/ -name "*gradle*" -type f 2>/dev/null || echo "No gradle files found"
+        echo ""
+        echo "📱 App directory:"
+        ls -la android/app/ 2>/dev/null || echo "❌ android/app not found"
+        echo ""
+        echo "🔧 Gradlew files:"
+        ls -la android/gradlew* 2>/dev/null || echo "❌ gradlew not found"
+      
+    - name: 🔧 Fix permissions and build
+      run: |
+        cd android
+        
+        # Убеждаемся что gradlew существует и имеет права
+        if [ -f "./gradlew" ]; then
+          echo "🔧 Setting gradlew permissions..."
+          chmod +x ./gradlew
+          
+          echo "🚀 Building APK..."
+          ./gradlew assembleDebug --stacktrace --info
+          
+          echo "✅ Build completed, checking results..."
+          if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
+            echo "✅ APK built successfully!"
+            ls -la app/build/outputs/apk/debug/
+          else
+            echo "❌ APK not found!"
+            find app/build -name "*.apk" -type f 2>/dev/null || echo "No APK files found anywhere"
+            exit 1
+          fi
+        else
+          echo "❌ gradlew not found!"
+          echo "📁 Contents of android directory:"
+          ls -la
+          exit 1
+        fi
+        
+    - name: 📤 Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: simple-android-apk
+        path: android/app/build/outputs/apk/debug/app-debug.apk
+        
+    - name: 📋 Get version
+      id: version
+      run: echo "VERSION=$(date +'%Y.%m.%d-%H%M')-simple" >> $GITHUB_OUTPUT
+      
+    - name: 📝 Rename APK
+      run: |
+        cp android/app/build/outputs/apk/debug/app-debug.apk novado-v${{ steps.version.outputs.VERSION }}.apk
+        
+    - name: 🚀 Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v${{ steps.version.outputs.VERSION }}
+        name: 📱 Novado v${{ steps.version.outputs.VERSION }} (Simple Build)
+        body: |
+          ## 🚀 Простая збірка Android APK
+          
+          📅 **Версія**: ${{ steps.version.outputs.VERSION }}  
+          📱 **Платформа**: Android  
+          🔄 **Тип**: Debug Build (Simple)  
+          🛠️ **Метод**: Manual workflow dispatch
+          
+          ### 📥 Встановлення:
+          1. Завантажте APK файл нижче
+          2. Увімкніть "Невідомі джерела" в налаштуваннях Android
+          3. Встановіть APK файл
+          4. Відкрийте додаток Novado
+          
+          ### ⚠️ Примітка:
+          Ця збірка створена через резервний workflow після проблем з основним.
+          Функціональність повністю ідентична основній збірці.
+          
+        files: |
+          novado-v${{ steps.version.outputs.VERSION }}.apk
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

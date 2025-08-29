@@ -53,6 +53,14 @@ jobs:
     - name: 📋 Install dependencies
       run: npm install --legacy-peer-deps
       
+    - name: 🧹 Clean Capacitor cache (if needed)
+      run: |
+        if [ -d "android" ]; then
+          echo "🧹 Cleaning existing Android build..."
+          rm -rf android/app/build/
+          echo "✅ Android build cache cleared"
+        fi
+      
     - name: ☕ Setup Java
       uses: actions/setup-java@v4
       with:
@@ -62,38 +70,81 @@ jobs:
     - name: 🤖 Setup Android SDK
       uses: android-actions/setup-android@v3
       
-    - name: ⚙️ Initialize Capacitor
+    - name: 📱 Accept Android SDK licenses
       run: |
-        npx cap init "Novado" "com.novado.app" --web-dir=dist
+        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+      
+    - name: ⚙️ Initialize Capacitor (if needed)
+      run: |
+        if [ ! -f "capacitor.config.ts" ]; then
+          echo "🔧 Initializing Capacitor..."
+          npx cap init "Novado" "com.novado.app" --web-dir=dist
+        else
+          echo "✅ Capacitor already initialized"
+        fi
         
-    - name: 🤖 Add Android platform
-      run: npx cap add android
+    - name: 🤖 Add Android platform (if needed)
+      run: |
+        if [ ! -d "android" ]; then
+          echo "📱 Adding Android platform..."
+          npx cap add android
+        else
+          echo "✅ Android platform already exists"
+        fi
       
     - name: 🔄 Sync with Android
-      run: npx cap sync android
+      run: |
+        echo "🔄 Syncing with Android platform..."
+        npx cap sync android
       
     - name: 🔍 Check Android structure
       run: |
         echo "📁 Checking android directory structure:"
-        ls -la android/
+        ls -la android/ || echo "❌ android directory not found"
         echo "📁 Checking gradlew:"
         ls -la android/gradlew* || echo "❌ gradlew not found"
+        echo "📁 Checking app directory:"
+        ls -la android/app/ || echo "❌ android/app directory not found"
+      
+    - name: 🔧 Fix gradlew permissions
+      run: |
+        if [ -f "android/gradlew" ]; then
+          echo "🔧 Setting gradlew permissions..."
+          chmod +x android/gradlew
+          echo "✅ gradlew permissions set"
+        else
+          echo "❌ gradlew not found, will try alternative build"
+        fi
       
     - name: 🏗️ Build Android APK
       run: |
         cd android
+        
+        # Проверяем наличие gradlew
         if [ -f "./gradlew" ]; then
-          chmod +x ./gradlew
-          ./gradlew assembleDebug
+          echo "🚀 Building APK with gradlew..."
+          ./gradlew assembleDebug --stacktrace
+        elif [ -f "gradlew.bat" ]; then
+          echo "🚀 Building APK with gradlew.bat..."
+          ./gradlew.bat assembleDebug --stacktrace
         else
-          echo "❌ gradlew not found, trying alternative build"
-          # Попробуем через gradle wrapper
-          if command -v gradle &> /dev/null; then
-            gradle assembleDebug
-          else
-            echo "❌ Neither gradlew nor gradle found"
-            exit 1
-          fi
+          echo "❌ No gradle wrapper found!"
+          echo "📁 Contents of android directory:"
+          ls -la
+          echo "🔍 Searching for gradle files:"
+          find . -name "*gradle*" -type f
+          exit 1
+        fi
+        
+        # Проверяем результат сборки
+        if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
+          echo "✅ APK built successfully!"
+          ls -la app/build/outputs/apk/debug/
+        else
+          echo "❌ APK not found after build!"
+          echo "📁 Checking build outputs:"
+          find app/build -name "*.apk" -type f || echo "No APK files found"
+          exit 1
         fi
         
     - name: 📤 Upload APK
