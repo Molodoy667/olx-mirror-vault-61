@@ -130,7 +130,7 @@ export const VirtualScrollList = React.forwardRef<VirtualScrollListRef, VirtualS
 );
 
 // Hook for easier usage with dynamic item heights
-export function useVirtualScrollList<T>({
+function useVirtualScrollList<T>({
   items,
   itemHeight,
   containerHeight

@@ -87,7 +87,7 @@ export function TableViewer({ tableName, onClose }: TableViewerProps) {
     } else if (activeSubTab === 'indexes') {
       loadTableIndexes();
     }
-  }, [tableName, activeSubTab, currentPage, pageSize, searchQuery, sortColumn, sortDirection]);
+  }, [tableName, activeSubTab, currentPage, pageSize, searchQuery, sortColumn, sortDirection, loadTableData, loadTableIndexes, loadTableStructure]);
 
   // Отримання primary key
   const getPrimaryKey = (): string => {

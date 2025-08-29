@@ -39,11 +39,11 @@ export function Layout({ children }: LayoutProps) {
         `;
         document.head.appendChild(configScript);
         
-        (window as any).gtag = (window as any).dataLayer?.push;
+        (window as unknown as { gtag: Function; dataLayer: unknown[] }).gtag = (window as unknown as { dataLayer: unknown[] }).dataLayer?.push;
       }
       
       // Добавляем Facebook Pixel если указан
-      if (settings.facebook_pixel_id && !(window as any).fbq) {
+      if (settings.facebook_pixel_id && !(window as unknown as { fbq?: Function }).fbq) {
         const script = document.createElement('script');
         script.innerHTML = `
           !function(f,b,e,v,n,t,s)

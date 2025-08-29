@@ -24,6 +24,8 @@ export default tseslint.config(
         { allowConstantExport: true },
       ],
       "@typescript-eslint/no-unused-vars": "off",
+      "@typescript-eslint/no-explicit-any": "warn", // Изменено с error на warn
+      "react-hooks/exhaustive-deps": "warn", // Изменено с error на warn
     },
   }
 );

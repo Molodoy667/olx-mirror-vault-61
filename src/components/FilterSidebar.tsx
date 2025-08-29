@@ -14,7 +14,7 @@ import { KatottgCityAutocomplete } from "./KatottgCityAutocomplete";
 interface FilterSidebarProps {
   isOpen: boolean;
   onClose: () => void;
-  onApplyFilters: (filters: any) => void;
+  onApplyFilters: (filters: Record<string, unknown>) => void;
   categories?: string[];
 }
 

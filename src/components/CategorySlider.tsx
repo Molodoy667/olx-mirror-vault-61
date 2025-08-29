@@ -16,7 +16,7 @@ import * as LucideIcons from "lucide-react";
 // Icon mapping function
 const getIconComponent = (iconName: string | null) => {
   if (!iconName) return LucideIcons.Package;
-  const IconComponent = (LucideIcons as any)[iconName];
+  const IconComponent = (LucideIcons as unknown)[iconName];
   return IconComponent || LucideIcons.Package;
 };
 

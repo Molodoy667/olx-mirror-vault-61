@@ -70,10 +70,10 @@ export function ImageUpload({
         title: "Успішно",
         description: `${uploadedUrls.length} зображень завантажено`,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Помилка",
-        description: error.message || "Не вдалося завантажити зображення",
+        description: error instanceof Error ? error.message : "Не вдалося завантажити зображення",
         variant: "destructive",
       });
     } finally {
