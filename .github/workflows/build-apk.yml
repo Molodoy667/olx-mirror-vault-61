@@ -76,30 +76,45 @@ jobs:
       id: version
       run: echo "VERSION=$(date +'%Y.%m.%d.%H%M')" >> $GITHUB_OUTPUT
       
-    - name: 🚀 Create Release
-      uses: softprops/action-gh-release@v1
+    - name: 📦 Prepare APK for download
+      run: |
+        # Copy APK to easy access location
+        cp android/app/build/outputs/apk/debug/app-debug.apk novado-v${{ steps.version.outputs.VERSION }}.apk
+        
+        echo "✅ APK готовий до завантаження:"
+        ls -la novado-v${{ steps.version.outputs.VERSION }}.apk
+        
+        echo "📱 Розмір APK:"
+        du -sh novado-v${{ steps.version.outputs.VERSION }}.apk
+        
+    - name: 📤 Upload APK as artifact
+      uses: actions/upload-artifact@v4
       with:
-        tag_name: v${{ steps.version.outputs.VERSION }}
-        name: 📱 Novado v${{ steps.version.outputs.VERSION }}
-        body: |
-          📱 **Novado Android APK**
-          
-          📅 Версія: ${{ steps.version.outputs.VERSION }}
-          📱 Назва: **Novado**
-          🇺🇦 Слоган: "Безліч оголошень чекають на тебе"
-          
-          ### 📥 Встановлення:
-          1. Завантажте APK
-          2. Увімкніть "Невідомі джерела" 
-          3. Встановіть APK
-          
-          ### ✨ Функції:
-          - 🎬 Splash screen з анімацією
-          - 📱 Іконка з буквою N
-          - 🔄 Автооновлення
-          
-        files: android/app/build/outputs/apk/debug/app-debug.apk
-        draft: false
-        prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        name: novado-apk-v${{ steps.version.outputs.VERSION }}
+        path: novado-v${{ steps.version.outputs.VERSION }}.apk
+        retention-days: 30
+        
+    - name: 📋 Build success summary
+      run: |
+        echo "🎉 NOVADO APK ЗБУДОВАНО УСПІШНО!"
+        echo "================================"
+        echo "📅 Версія: v${{ steps.version.outputs.VERSION }}"
+        echo "📱 Назва: Novado"
+        echo "🇺🇦 Слоган: Безліч оголошень чекають на тебе"
+        echo ""
+        echo "📥 ЯК ЗАВАНТАЖИТИ APK:"
+        echo "1. GitHub → Actions → Цей workflow"
+        echo "2. Прокрутіть вниз до 'Artifacts'"
+        echo "3. Клікніть 'novado-apk-v${{ steps.version.outputs.VERSION }}'"
+        echo "4. Завантажте ZIP та розпакуйте APK"
+        echo ""
+        echo "📱 ЯК ВСТАНОВИТИ:"
+        echo "1. Увімкніть 'Невідомі джерела' в Android"
+        echo "2. Встановіть APK файл"
+        echo "3. Відкрийте додаток Novado"
+        echo ""
+        echo "✨ ФУНКЦІЇ ДОДАТКУ:"
+        echo "- 🎬 Splash screen з анімацією"
+        echo "- 📱 Іконка з буквою N"
+        echo "- 🔄 Автооновлення"
+        echo "- 🇺🇦 Український брендинг"
