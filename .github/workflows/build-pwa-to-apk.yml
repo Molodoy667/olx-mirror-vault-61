@@ -1,0 +1,90 @@
+name: 📱 PWA to APK (PWA Builder)
+
+on:
+  workflow_dispatch:
+    inputs:
+      package_id:
+        description: 'Android package ID'
+        required: false
+        default: 'com.novado.app'
+        type: string
+
+jobs:
+  build-pwa-apk:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout
+      uses: actions/checkout@v4
+      
+    - name: 📦 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: 📋 Install dependencies
+      run: npm install --legacy-peer-deps
+      
+    - name: 🏗️ Build PWA
+      run: npm run build
+      
+    - name: 📱 Generate APK with PWA Builder
+      uses: pwa-builder/PWABuilder@v2
+      with:
+        site-url: 'https://novado.com.ua'
+        package-id: ${{ github.event.inputs.package_id }}
+        app-name: 'Novado'
+        app-short-name: 'Novado'
+        app-description: 'Безліч оголошень чекають на тебе'
+        manifest-path: './dist/manifest.json'
+        output-path: './pwa-apk'
+        
+    - name: 📋 Get version
+      id: version
+      run: echo "VERSION=$(date +'%Y.%m.%d-%H%M')-pwa" >> $GITHUB_OUTPUT
+      
+    - name: 🔍 Check APK results
+      run: |
+        echo "📁 PWA Builder output:"
+        ls -la pwa-apk/ || echo "❌ pwa-apk directory not found"
+        
+        echo "📱 Looking for APK files:"
+        find . -name "*.apk" -type f || echo "No APK files found"
+        
+    - name: 🚀 Create Release
+      if: hashFiles('pwa-apk/*.apk') != ''
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v${{ steps.version.outputs.VERSION }}
+        name: 📱 Novado PWA v${{ steps.version.outputs.VERSION }}
+        body: |
+          📱 **Novado APK (PWA Builder)**
+          
+          📅 Версія: ${{ steps.version.outputs.VERSION }}
+          🏗️ Метод: PWA Builder (Microsoft)
+          📱 Назва: **Novado**
+          
+          ### 📥 Встановлення:
+          1. Завантажте APK нижче
+          2. Увімкніть "Невідомі джерела"
+          3. Встановіть APK
+          4. Відкрийте **Novado**
+          
+          ### ✨ Особливості PWA Builder:
+          - 🎯 Оптимізований для PWA
+          - 📱 Нативна інтеграція з Android
+          - 🔄 Автоматичні автооновлення
+          - ⚡ Швидка робота
+          
+          ### 🇺🇦 Функції:
+          - 🎬 Splash screen з анімацією
+          - 📱 Іконка з буквою N
+          - 🇺🇦 "Безліч оголошень чекають на тебе"
+          - 🌐 Повна функціональність сайту
+          
+        files: pwa-apk/*.apk
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
