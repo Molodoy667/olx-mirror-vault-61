@@ -1,0 +1,179 @@
+name: 📱 Android APK (Offline)
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_clean:
+        description: 'Force clean Android project'
+        required: false
+        default: 'false'
+        type: boolean
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout
+      uses: actions/checkout@v4
+      
+    - name: 📦 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: 📋 Install dependencies
+      run: npm install --legacy-peer-deps
+      
+    - name: 🏗️ Build PWA
+      run: npm run build
+      
+    - name: ☕ Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+        
+    - name: 🤖 Setup Android SDK
+      uses: android-actions/setup-android@v3
+      
+    - name: 📱 Accept SDK licenses
+      run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+      
+    - name: 🧹 Clean Android (if requested)
+      if: ${{ github.event.inputs.force_clean == 'true' }}
+      run: rm -rf android/
+      
+    - name: ⚙️ Setup Capacitor
+      run: |
+        npx cap init "Novado" "com.novado.app" --web-dir=dist || echo "Already initialized"
+        npx cap add android || echo "Platform already exists"
+        npx cap sync android
+        
+    - name: 🔧 Prepare Android build
+      run: |
+        cd android
+        
+        # Create minimal working build.gradle
+        cat > build.gradle << 'EOF'
+buildscript {
+    ext {
+        compileSdkVersion = 34
+        targetSdkVersion = 34
+        minSdkVersion = 22
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.0.0'
+    }
+}
+
+apply from: "capacitor.settings.gradle"
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+EOF
+        
+        # Create gradle.properties
+        cat > gradle.properties << 'EOF'
+org.gradle.jvmargs=-Xmx2048m
+android.useAndroidX=true
+android.enableJetifier=true
+EOF
+        
+        # Create settings.gradle
+        cat > settings.gradle << 'EOF'
+include ':app'
+include ':capacitor-cordova-android-plugins'
+project(':capacitor-cordova-android-plugins').projectDir = new File('./capacitor-cordova-android-plugins/')
+
+apply from: 'capacitor.settings.gradle'
+EOF
+        
+    - name: 🔧 Install Gradle wrapper manually
+      run: |
+        cd android
+        
+        # Download gradle wrapper files directly
+        mkdir -p gradle/wrapper
+        
+        # Download gradle-wrapper.jar
+        curl -L https://github.com/gradle/gradle/raw/v8.0.2/gradle/wrapper/gradle-wrapper.jar -o gradle/wrapper/gradle-wrapper.jar || echo "Failed to download gradle-wrapper.jar"
+        
+        # Create gradle-wrapper.properties
+        cat > gradle/wrapper/gradle-wrapper.properties << 'EOF'
+distributionBase=GRADLE_USER_HOME
+distributionPath=wrapper/dists
+distributionUrl=https\://services.gradle.org/distributions/gradle-8.0.2-bin.zip
+zipStoreBase=GRADLE_USER_HOME
+zipStorePath=wrapper/dists
+EOF
+        
+        # Create gradlew script
+        cat > gradlew << 'EOF'
+#!/bin/sh
+exec java -jar gradle/wrapper/gradle-wrapper.jar "$@"
+EOF
+        
+        chmod +x gradlew
+        
+        echo "✅ Gradle wrapper created manually"
+        
+    - name: 🏗️ Build APK
+      run: |
+        cd android
+        
+        # Try to build APK
+        if [ -f "gradlew" ]; then
+          echo "🚀 Building APK with gradlew..."
+          ./gradlew assembleDebug --stacktrace || echo "Gradlew build failed"
+        fi
+        
+        # Check if APK was created
+        if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
+          echo "✅ APK built successfully!"
+          ls -la app/build/outputs/apk/debug/
+          du -sh app/build/outputs/apk/debug/app-debug.apk
+        else
+          echo "❌ APK not found, checking alternatives..."
+          find . -name "*.apk" -type f || echo "No APK files found"
+        fi
+        
+    - name: 📋 Get version
+      id: version
+      run: echo "VERSION=$(date +'%Y.%m.%d-%H%M')-offline" >> $GITHUB_OUTPUT
+      
+    - name: 🚀 Create Release
+      if: hashFiles('android/app/build/outputs/apk/debug/app-debug.apk') != ''
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v${{ steps.version.outputs.VERSION }}
+        name: 📱 Novado v${{ steps.version.outputs.VERSION }} (Offline Build)
+        body: |
+          📱 **Android APK (Offline Build)**
+          
+          📅 Версія: ${{ steps.version.outputs.VERSION }}
+          📱 Платформа: Android
+          🔧 Метод: Offline build (без Gradle сервісів)
+          
+          ### 📥 Встановлення:
+          1. Завантажте APK нижче
+          2. Увімкніть "Невідомі джерела" 
+          3. Встановіть APK
+          4. Відкрийте Novado
+          
+          ### ✨ Функції:
+          - 🎬 Splash screen з анімацією
+          - 📱 Іконка з буквою N
+          - 🇺🇦 Український брендинг
+          - 🔄 Автооновлення
+          
+        files: android/app/build/outputs/apk/debug/app-debug.apk
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

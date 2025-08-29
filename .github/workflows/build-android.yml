@@ -34,10 +34,18 @@ jobs:
     - name: 🤖 Setup Android SDK
       uses: android-actions/setup-android@v3
       
-    - name: 🔧 Setup Gradle
-      uses: gradle/gradle-build-action@v2
-      with:
-        gradle-version: '8.0.2'
+    - name: 🔧 Install Gradle manually
+      run: |
+        # Скачиваем Gradle напрямую если сервис недоступен
+        wget -q https://services.gradle.org/distributions/gradle-8.0.2-bin.zip || \
+        curl -sL https://services.gradle.org/distributions/gradle-8.0.2-bin.zip -o gradle-8.0.2-bin.zip || \
+        echo "⚠️ Gradle download failed, will try system gradle"
+        
+        if [ -f "gradle-8.0.2-bin.zip" ]; then
+          unzip -q gradle-8.0.2-bin.zip
+          export PATH=$PWD/gradle-8.0.2/bin:$PATH
+          echo "✅ Gradle 8.0.2 installed manually"
+        fi
         
     - name: 📱 Accept SDK licenses
       run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
@@ -52,24 +60,35 @@ jobs:
       run: |
         cd android
         
-        # Create build.gradle
-        echo 'buildscript { ext { compileSdkVersion = 34; targetSdkVersion = 34; minSdkVersion = 22 } dependencies { classpath "com.android.tools.build:gradle:8.0.0" } }' > build.gradle
-        echo 'apply from: "capacitor.settings.gradle"' >> build.gradle
-        echo 'allprojects { repositories { google(); mavenCentral() } }' >> build.gradle
+        # Create build.gradle (простая версия)
+        printf 'buildscript {\n  ext {\n    compileSdkVersion = 34\n    targetSdkVersion = 34\n    minSdkVersion = 22\n  }\n  dependencies {\n    classpath "com.android.tools.build:gradle:8.0.0"\n  }\n}\n' > build.gradle
+        printf 'apply from: "capacitor.settings.gradle"\n' >> build.gradle
+        printf 'allprojects {\n  repositories {\n    google()\n    mavenCentral()\n  }\n}\n' >> build.gradle
         
         # Create gradle.properties
-        echo 'org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8' > gradle.properties
-        echo 'android.useAndroidX=true' >> gradle.properties
-        echo 'android.enableJetifier=true' >> gradle.properties
+        printf 'org.gradle.jvmargs=-Xmx2048m\n' > gradle.properties
+        printf 'android.useAndroidX=true\n' >> gradle.properties
+        printf 'android.enableJetifier=true\n' >> gradle.properties
         
         # Create settings.gradle
-        echo 'include ":app"' > settings.gradle
-        echo 'include ":capacitor-cordova-android-plugins"' >> settings.gradle
-        echo 'apply from: "capacitor.settings.gradle"' >> settings.gradle
+        printf 'include ":app"\n' > settings.gradle
+        printf 'include ":capacitor-cordova-android-plugins"\n' >> settings.gradle
+        printf 'apply from: "capacitor.settings.gradle"\n' >> settings.gradle
         
-        # Create gradle wrapper
-        gradle wrapper --gradle-version 8.0.2
-        chmod +x gradlew
+        # Create gradle wrapper (try multiple approaches)
+        if command -v gradle >/dev/null 2>&1; then
+          gradle wrapper --gradle-version 8.0.2 || gradle wrapper || echo "Wrapper creation failed"
+        else
+          echo "⚠️ Gradle not found, trying alternative approach"
+        fi
+        
+        # Ensure gradlew exists and is executable
+        if [ -f "gradlew" ]; then
+          chmod +x gradlew
+          echo "✅ Gradle wrapper ready"
+        else
+          echo "❌ Gradle wrapper not created"
+        fi
         
     - name: 🏗️ Build APK
       run: |

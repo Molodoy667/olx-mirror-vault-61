@@ -1,0 +1,95 @@
+name: 🌐 PWA Build Only
+
+on:
+  workflow_dispatch:
+    inputs:
+      create_release:
+        description: 'Create GitHub Release'
+        required: false
+        default: 'true'
+        type: boolean
+
+jobs:
+  build-pwa:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout
+      uses: actions/checkout@v4
+      
+    - name: 📦 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: 📋 Install dependencies
+      run: npm install --legacy-peer-deps
+      
+    - name: 🏗️ Build PWA
+      run: npm run build
+      
+    - name: 📊 Build info
+      run: |
+        echo "✅ PWA build completed!"
+        echo "📁 Build size:"
+        du -sh dist/
+        echo "📋 Key files:"
+        ls -la dist/index.html dist/manifest.json dist/sw.js 2>/dev/null || echo "Some files missing"
+        
+    - name: 📦 Package PWA
+      run: |
+        cd dist
+        zip -r ../novado-pwa.zip .
+        cd ..
+        echo "📦 PWA packaged as ZIP"
+        
+    - name: 📋 Get version
+      id: version
+      run: echo "VERSION=$(date +'%Y.%m.%d-%H%M')-pwa" >> $GITHUB_OUTPUT
+      
+    - name: 🚀 Create PWA Release
+      if: ${{ github.event.inputs.create_release == 'true' }}
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v${{ steps.version.outputs.VERSION }}
+        name: 🌐 Novado PWA v${{ steps.version.outputs.VERSION }}
+        body: |
+          🌐 **PWA Build Ready!**
+          
+          📅 Версія: ${{ steps.version.outputs.VERSION }}
+          🌐 Платформа: Progressive Web App
+          
+          ### 📥 Встановлення PWA:
+          1. Відкрийте сайт у браузері
+          2. Натисніть "Встановити" в адресному рядку
+          3. Або додайте на головний екран
+          
+          ### 📦 ZIP архів:
+          - Містить всі файли PWA
+          - Готовий до розгортання на будь-якому хостингу
+          - Працює з будь-яким веб-сервером
+          
+          ### ✨ Функції:
+          - 🎬 Splash screen з анімацією
+          - 📱 Іконка з буквою N  
+          - 🇺🇦 Український брендинг
+          - 🔄 Service Worker для автооновлень
+          - 📱 Responsive дизайн
+          
+        files: |
+          novado-pwa.zip
+          dist/index.html
+          dist/manifest.json
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: 📤 Upload PWA artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: novado-pwa-build
+        path: |
+          dist/
+          novado-pwa.zip
