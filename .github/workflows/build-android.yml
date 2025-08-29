@@ -3,7 +3,16 @@ name: 📱 Build PWA and Android APK
 on:
   push:
     branches: [ main ]
+    paths-ignore:
+      - 'README*.md'
+      - 'docs/**'
   workflow_dispatch:
+    inputs:
+      debug:
+        description: 'Enable debug output'
+        required: false
+        default: 'false'
+        type: boolean
 
 jobs:
   build-pwa:

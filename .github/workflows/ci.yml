@@ -1,9 +1,8 @@
 name: CI/CD Pipeline
 
 on:
-  push:
-    branches: [ main ]
-  # Removed pull_request and develop branch to prevent automatic workflows
+  workflow_dispatch:  # Только ручной запуск
+  # Временно отключен автоматический запуск для избежания конфликтов
 
 jobs:
   test:
