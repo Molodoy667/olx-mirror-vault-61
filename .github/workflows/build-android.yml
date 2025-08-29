@@ -1,14 +1,12 @@
-name: 📱 Build Android APK
+name: 📱 Build PWA and Android APK
 
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
 
 jobs:
-  build-web:
+  build-pwa:
     runs-on: ubuntu-latest
     
     steps:
@@ -22,19 +20,19 @@ jobs:
         cache: 'npm'
         
     - name: 📋 Install dependencies
-      run: npm ci
+      run: npm install --legacy-peer-deps
       
-    - name: 🏗️ Build web app
+    - name: 🏗️ Build PWA
       run: npm run build
       
-    - name: 📤 Upload web build
+    - name: 📤 Upload PWA build
       uses: actions/upload-artifact@v4
       with:
-        name: web-build
+        name: pwa-build
         path: dist/
 
-  build-android:
-    needs: build-web
+  build-apk:
+    needs: build-pwa
     runs-on: ubuntu-latest
     
     steps:
@@ -45,14 +43,16 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        cache: 'npm'
         
-    - name: 📥 Download web build
+    - name: 📥 Download PWA build
       uses: actions/download-artifact@v4
       with:
-        name: web-build
+        name: pwa-build
         path: dist/
         
+    - name: 📋 Install dependencies
+      run: npm install --legacy-peer-deps
+      
     - name: ☕ Setup Java
       uses: actions/setup-java@v4
       with:
@@ -62,17 +62,17 @@ jobs:
     - name: 🤖 Setup Android SDK
       uses: android-actions/setup-android@v3
       
-    - name: 📱 Install Capacitor
+    - name: ⚙️ Initialize Capacitor (if needed)
       run: |
-        npm install -g @capacitor/cli
-        npm install @capacitor/core @capacitor/android
-        
-    - name: ⚙️ Initialize Capacitor
-      run: |
-        npx cap init "Novado" "com.novado.app" --web-dir=dist
+        if [ ! -f "capacitor.config.ts" ]; then
+          npx cap init "Novado" "com.novado.app" --web-dir=dist
+        fi
         
     - name: 🤖 Add Android platform
-      run: npx cap add android
+      run: |
+        if [ ! -d "android" ]; then
+          npx cap add android
+        fi
       
     - name: 🔄 Sync with Android
       run: npx cap sync android
@@ -80,6 +80,7 @@ jobs:
     - name: 🏗️ Build Android APK
       run: |
         cd android
+        chmod +x ./gradlew
         ./gradlew assembleDebug
         
     - name: 📤 Upload APK
@@ -89,7 +90,7 @@ jobs:
         path: android/app/build/outputs/apk/debug/app-debug.apk
 
   release:
-    needs: build-android
+    needs: build-apk
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     
@@ -101,31 +102,41 @@ jobs:
         
     - name: 📋 Get version
       id: version
-      run: echo "VERSION=$(date +'%Y.%m.%d.%H%M')" >> $GITHUB_OUTPUT
+      run: echo "VERSION=$(date +'%Y.%m.%d-%H%M')" >> $GITHUB_OUTPUT
+      
+    - name: 📝 Rename APK
+      run: mv app-debug.apk novado-v${{ steps.version.outputs.VERSION }}.apk
       
     - name: 🚀 Create Release
       uses: softprops/action-gh-release@v1
       with:
         tag_name: v${{ steps.version.outputs.VERSION }}
-        name: Novado v${{ steps.version.outputs.VERSION }}
+        name: 📱 Novado v${{ steps.version.outputs.VERSION }}
         body: |
-          🚀 **Автоматична збірка APK**
+          ## 🚀 Автоматична збірка Android APK
           
-          📅 **Дата**: ${{ steps.version.outputs.VERSION }}
-          📱 **Платформа**: Android
-          🔄 **Тип**: Debug Build
+          📅 **Версія**: ${{ steps.version.outputs.VERSION }}  
+          📱 **Платформа**: Android  
+          🔄 **Тип**: Debug Build  
           
-          ### 📥 Завантаження:
-          - Завантажте `novado-v${{ steps.version.outputs.VERSION }}.apk`
-          - Увімкніть "Невідомі джерела" в налаштуваннях Android
-          - Встановіть APK файл
+          ### 📥 Встановлення:
+          1. Завантажте APK файл нижче
+          2. Увімкніть "Невідомі джерела" в налаштуваннях Android
+          3. Встановіть APK файл
+          4. Відкрийте додаток Novado
           
           ### 🔄 Автооновлення:
-          - Приложення автоматично перевірятиме оновлення
-          - PWA функції забезпечують синхронізацію з веб-версією
+          - ✅ Додаток автоматично перевіряє оновлення
+          - ✅ PWA технології забезпечують миттєву синхронізацію
+          - ✅ Нові функції з'являються без переустановки APK
+          
+          ### 🛠️ Технічна інформація:
+          - **PWA**: Прогресивне веб-додаток з офлайн підтримкою
+          - **Capacitor**: Нативна обгортка для Android
+          - **Supabase**: Backend та база даних
           
         files: |
-          app-debug.apk
+          novado-v${{ steps.version.outputs.VERSION }}.apk
         draft: false
         prerelease: false
       env:
