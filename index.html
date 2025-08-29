@@ -1,20 +1,43 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="uk">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OLX - Оголошення України</title>
-    <meta name="description" content="OLX - найбільший сервіс оголошень України. Купуйте та продавайте товари на OLX" />
-    <meta name="author" content="Lovable" />
-
-    <meta property="og:title" content="olx-clone-master" />
-    <meta property="og:description" content="Lovable Generated Project" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    
+    <!-- PWA Meta Tags -->
+    <title>Novado - Український Маркетплейс</title>
+    <meta name="description" content="Novado - найкращий український маркетплейс для купівлі та продажу товарів" />
+    <meta name="author" content="Novado Team" />
+    <meta name="keywords" content="маркетплейс, україна, купити, продати, оголошення, товари" />
+    
+    <!-- PWA Configuration -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#3B82F6" />
+    <meta name="background-color" content="#ffffff" />
+    
+    <!-- Mobile App Meta -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Novado" />
+    
+    <!-- Icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icon-192x192.png" />
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="Novado - Український Маркетплейс" />
+    <meta property="og:description" content="Найкращий український маркетплейс для купівлі та продажу товарів" />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
-
+    <meta property="og:url" content="https://novado.com.ua" />
+    <meta property="og:image" content="/icon-512x512.png" />
+    <meta property="og:locale" content="uk_UA" />
+    
+    <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@lovable_dev" />
-    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <meta name="twitter:title" content="Novado - Український Маркетплейс" />
+    <meta name="twitter:description" content="Найкращий український маркетплейс для купівлі та продажу товарів" />
+    <meta name="twitter:image" content="/icon-512x512.png" />
   </head>
 
   <body>
@@ -40,5 +63,63 @@
     
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((registration) => {
+              console.log('✅ SW registered: ', registration);
+              
+              // Проверяем обновления каждые 5 минут
+              setInterval(() => {
+                registration.update();
+              }, 5 * 60 * 1000);
+              
+              // Слушаем сообщения от SW
+              navigator.serviceWorker.addEventListener('message', (event) => {
+                if (event.data && event.data.type === 'UPDATE_AVAILABLE') {
+                  console.log('🔄 Update available:', event.data.version);
+                  
+                  // Показываем уведомление пользователю
+                  if (confirm('Доступна нова версія додатку. Оновити зараз?')) {
+                    window.location.reload();
+                  }
+                }
+              });
+            })
+            .catch((registrationError) => {
+              console.log('❌ SW registration failed: ', registrationError);
+            });
+        });
+      }
+      
+      // Обработка установки PWA
+      let deferredPrompt;
+      window.addEventListener('beforeinstallprompt', (e) => {
+        console.log('💾 PWA install prompt available');
+        e.preventDefault();
+        deferredPrompt = e;
+        
+        // Показываем кнопку установки (можно добавить в UI)
+        const installButton = document.getElementById('install-button');
+        if (installButton) {
+          installButton.style.display = 'block';
+          installButton.addEventListener('click', () => {
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then((choiceResult) => {
+              console.log('👤 User choice:', choiceResult.outcome);
+              deferredPrompt = null;
+            });
+          });
+        }
+      });
+      
+      // После установки PWA
+      window.addEventListener('appinstalled', (evt) => {
+        console.log('🎉 PWA was installed');
+      });
+    </script>
   </body>
 </html>

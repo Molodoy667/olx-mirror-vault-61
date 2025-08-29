@@ -1,0 +1,21 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="512" height="512" rx="96" fill="#3B82F6"/>
+  
+  <!-- Main Icon - Shopping Bag -->
+  <path d="M128 192C128 192 128 160 128 144C128 108.654 156.654 80 192 80H320C355.346 80 384 108.654 384 144V192" stroke="white" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="96" y="192" width="320" height="240" rx="16" fill="white" fill-opacity="0.9"/>
+  <rect x="96" y="192" width="320" height="240" rx="16" stroke="white" stroke-width="8"/>
+  
+  <!-- Handle -->
+  <path d="M176 240V224C176 215.163 183.163 208 192 208H320C328.837 208 336 215.163 336 224V240" stroke="#3B82F6" stroke-width="16" stroke-linecap="round"/>
+  
+  <!-- Novado Text -->
+  <text x="256" y="380" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="#3B82F6" text-anchor="middle">Novado</text>
+  
+  <!-- Ukrainian Flag Colors -->
+  <rect x="144" y="280" width="80" height="8" fill="#005BBB"/>
+  <rect x="144" y="296" width="80" height="8" fill="#FFD500"/>
+  <rect x="288" y="280" width="80" height="8" fill="#005BBB"/>
+  <rect x="288" y="296" width="80" height="8" fill="#FFD500"/>
+</svg>
