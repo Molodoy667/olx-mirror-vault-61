@@ -1,6 +1,0 @@
-import{c as i,r as o,j as s,B as n,g as l}from"./index-KbJkRX07.js";import{b as c}from"./select-CxSQralT.js";/**
- * @license lucide-react v0.462.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */const h=i("Gift",[["rect",{x:"3",y:"8",width:"18",height:"4",rx:"1",key:"bkv52"}],["path",{d:"M12 8v13",key:"1c76mn"}],["path",{d:"M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7",key:"6wjy6b"}],["path",{d:"M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5",key:"1ihvrl"}]]);function f(){const[r,e]=o.useState(!1);o.useEffect(()=>{const t=()=>{window.pageYOffset>300?e(!0):e(!1)};return window.addEventListener("scroll",t),()=>window.removeEventListener("scroll",t)},[]);const a=()=>{window.scrollTo({top:0,behavior:"smooth"})};return s.jsx(n,{onClick:a,className:l("fixed bottom-20 right-4 z-50 rounded-full p-3","bg-gradient-to-r from-primary to-primary-dark","shadow-glow hover:shadow-elevated hover:scale-110","transition-all duration-300",r?"translate-y-0 opacity-100":"translate-y-16 opacity-0 pointer-events-none"),size:"icon",children:s.jsx(c,{className:"h-5 w-5"})})}export{h as G,f as S};

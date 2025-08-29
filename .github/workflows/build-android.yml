@@ -45,13 +45,12 @@ jobs:
         
     - name: ⚙️ Setup Capacitor
       run: |
-        # Полная очистка и пересоздание
-        rm -rf android/ node_modules/.cache/
-        
-        # Инициализация
-        npx cap init "Novado" "com.novado.app" --web-dir=dist
+        # Capacitor config уже в репозитории
+        echo "📱 Creating Android project..."
         npx cap add android
         npx cap sync android
+        
+        echo "✅ Android project created"
         
     - name: 🔧 Fix Android project
       run: |

@@ -29,7 +29,6 @@ dist-ssr
 # Capacitor
 android/
 ios/
-capacitor.config.ts
 capacitor.config.json
 
 # Supabase
