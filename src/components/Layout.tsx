@@ -1,7 +1,8 @@
 import { useLocation } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { UserBottomPanel } from '@/components/UserBottomPanel';
 import { useSiteSettings, updatePageMeta } from '@/hooks/useSiteSettings';
+import { showSuccessToast, showErrorToast } from '@/lib/toast-helpers';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -10,6 +11,7 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const { settings, loading } = useSiteSettings();
+  const [permissionsRequested, setPermissionsRequested] = useState(false);
   
   // Не показываем UserBottomPanel на админских страницах
   const isAdminPage = location.pathname.startsWith('/admin');

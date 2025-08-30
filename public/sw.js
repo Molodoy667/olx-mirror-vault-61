@@ -1,25 +1,24 @@
 // Service Worker для Novado PWA
-const CACHE_NAME = 'novado-v1.0.0';
+const CACHE_NAME = 'novado-v4.5.1';
 const urlsToCache = [
   '/',
-  '/static/js/bundle.js',
-  '/static/css/main.css',
-  '/manifest.json'
+  '/manifest.json',
+  '/icon.svg'
 ];
 
 // Установка Service Worker
 self.addEventListener('install', (event) => {
-  console.log('🚀 Service Worker installing...');
+  console.log('🚀 Service Worker installing v4.5.1...');
   
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('📦 Opened cache');
+        console.log('📦 Opened cache v4.5.1');
         return cache.addAll(urlsToCache);
       })
       .then(() => {
-        console.log('✅ Service Worker installed successfully');
-        return self.skipWaiting();
+        console.log('✅ Service Worker v4.5.1 installed successfully');
+        return self.skipWaiting(); // Принудительно активируем новую версию
       })
   );
 });
@@ -47,9 +46,12 @@ self.addEventListener('activate', (event) => {
 
 // Перехват запросов
 self.addEventListener('fetch', (event) => {
-  // Стратегия: Network First для API, Cache First для статики
-  if (event.request.url.includes('/api/') || event.request.url.includes('supabase.co')) {
-    // Network First для API запросов
+  // NETWORK FIRST для всех запросов в Android приложении
+  const isAndroidApp = event.request.headers.get('user-agent')?.includes('CapacitorWebView') || 
+                      event.request.headers.get('user-agent')?.includes('Novado');
+  
+  if (isAndroidApp || event.request.url.includes('/api/') || event.request.url.includes('supabase.co')) {
+    // Network First - всегда пытаемся получить свежие данные
     event.respondWith(
       fetch(event.request)
         .then((response) => {
@@ -67,22 +69,19 @@ self.addEventListener('fetch', (event) => {
         })
     );
   } else {
-    // Cache First для статических файлов
+    // Для веб-версии используем Cache First
     event.respondWith(
-      caches.match(event.request)
+      fetch(event.request)
         .then((response) => {
-          if (response) {
-            return response;
-          }
-          return fetch(event.request)
-            .then((response) => {
-              const responseClone = response.clone();
-              caches.open(CACHE_NAME)
-                .then((cache) => {
-                  cache.put(event.request, responseClone);
-                });
-              return response;
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME)
+            .then((cache) => {
+              cache.put(event.request, responseClone);
             });
+          return response;
+        })
+        .catch(() => {
+          return caches.match(event.request);
         })
     );
   }
