@@ -1,6 +1,7 @@
 {
   "name": "Novado - Український Маркетплейс",
   "short_name": "Novado",
+  "version": "4.5.1",
   "description": "Найкращий український маркетплейс для купівлі та продажу товарів",
   "start_url": "/",
   "display": "standalone",

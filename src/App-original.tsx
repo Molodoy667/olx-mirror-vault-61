@@ -69,18 +69,16 @@ const queryClient = new QueryClient();
 
 const App = () => {
   const [showSplash, setShowSplash] = useState(() => {
-    // Показываем splash только при первом запуске или в мобильном приложении
-    const isFirstVisit = !localStorage.getItem('novado-visited');
-    const isMobileApp = window.matchMedia('(display-mode: standalone)').matches || 
-                       window.navigator.standalone || 
-                       document.referrer.includes('android-app://');
+    // Показываем splash только в настоящем Android APK приложении
+    const isRealAndroidApp = (window as any).Capacitor !== undefined;
     
-    if (isFirstVisit) {
-      localStorage.setItem('novado-visited', 'true');
-      return true;
+    // В веб-версии splash НЕ показываем
+    if (!isRealAndroidApp) {
+      return false;
     }
     
-    return isMobileApp;
+    // В Android APK показываем каждый раз
+    return true;
   });
 
   const handleSplashComplete = () => {
