@@ -1,44 +1,82 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Background Gradient -->
+  <!-- Enhanced Background Gradient -->
   <defs>
     <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#1E40AF;stop-opacity:1" />
+      <stop offset="0%" style="stop-color:#667EEA;stop-opacity:1" />
+      <stop offset="30%" style="stop-color:#3B82F6;stop-opacity:1" />
+      <stop offset="70%" style="stop-color:#1E40AF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1E3A8A;stop-opacity:1" />
     </linearGradient>
+    
     <linearGradient id="nGradient" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#E5E7EB;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#F8FAFC;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#E2E8F0;stop-opacity:1" />
     </linearGradient>
+    
+    <linearGradient id="shineGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#FFFFFF;stop-opacity:0.2" />
+    </linearGradient>
+    
     <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
-      <feDropShadow dx="4" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.3"/>
+      <feDropShadow dx="6" dy="12" stdDeviation="16" flood-color="#000000" flood-opacity="0.4"/>
+    </filter>
+    
+    <filter id="innerShadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="2" dy="4" stdDeviation="8" flood-color="#1E40AF" flood-opacity="0.3"/>
     </filter>
   </defs>
   
-  <!-- Background with rounded corners -->
-  <rect width="512" height="512" rx="96" fill="url(#bgGradient)"/>
+  <!-- Background with enhanced gradient -->
+  <rect width="512" height="512" rx="108" fill="url(#bgGradient)"/>
   
-  <!-- Decorative circles -->
-  <circle cx="128" cy="128" r="32" fill="white" opacity="0.1"/>
-  <circle cx="384" cy="128" r="24" fill="white" opacity="0.15"/>
-  <circle cx="384" cy="384" r="28" fill="white" opacity="0.1"/>
-  <circle cx="128" cy="384" r="20" fill="white" opacity="0.2"/>
+  <!-- Decorative animated circles -->
+  <circle cx="100" cy="100" r="40" fill="white" opacity="0.08">
+    <animate attributeName="opacity" values="0.08;0.15;0.08" dur="4s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="412" cy="100" r="28" fill="white" opacity="0.12">
+    <animate attributeName="opacity" values="0.12;0.20;0.12" dur="3s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="412" cy="412" r="35" fill="white" opacity="0.10">
+    <animate attributeName="opacity" values="0.10;0.18;0.10" dur="5s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="100" cy="412" r="25" fill="white" opacity="0.14">
+    <animate attributeName="opacity" values="0.14;0.22;0.14" dur="3.5s" repeatCount="indefinite"/>
+  </circle>
   
-  <!-- Main Letter N with shadow -->
+  <!-- Background pattern -->
+  <circle cx="256" cy="256" r="200" fill="none" stroke="white" stroke-width="1" opacity="0.05"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="white" stroke-width="1" opacity="0.08"/>
+  
+  <!-- Main Letter N with enhanced design -->
   <g filter="url(#shadow)">
-    <path d="M180 140 L180 372 L220 372 L220 240 L292 372 L332 372 L332 140 L292 140 L292 272 L220 140 L180 140 Z" 
+    <!-- N Letter Background -->
+    <path d="M170 130 L170 382 L230 382 L230 235 L302 382 L342 382 L342 130 L282 130 L282 277 L210 130 L170 130 Z" 
           fill="url(#nGradient)" 
           stroke="white" 
-          stroke-width="2"/>
+          stroke-width="3"/>
+    
+    <!-- Inner highlight -->
+    <path d="M170 130 L210 130 L210 180 L170 140 Z" fill="url(#shineGradient)"/>
+    <path d="M302 382 L342 382 L342 332 L302 372 Z" fill="url(#shineGradient)"/>
   </g>
   
-  <!-- Ukrainian accent -->
-  <rect x="180" y="390" width="152" height="6" rx="3" fill="#FFD500"/>
-  <rect x="180" y="400" width="152" height="6" rx="3" fill="#005BBB"/>
+  <!-- Enhanced Ukrainian accent with animation -->
+  <rect x="170" y="400" width="172" height="8" rx="4" fill="#FFD500">
+    <animate attributeName="opacity" values="0.9;1;0.9" dur="2s" repeatCount="indefinite"/>
+  </rect>
+  <rect x="170" y="412" width="172" height="8" rx="4" fill="#005BBB">
+    <animate attributeName="opacity" values="0.9;1;0.9" dur="2s" repeatCount="indefinite" begin="1s"/>
+  </rect>
   
-  <!-- Subtle shine effect -->
-  <path d="M180 140 L220 140 L220 200 L180 160 Z" fill="white" opacity="0.3"/>
-  <circle cx="200" cy="160" r="8" fill="white" opacity="0.4"/>
+  <!-- Premium shine effects -->
+  <ellipse cx="200" cy="160" rx="12" ry="8" fill="white" opacity="0.6"/>
+  <ellipse cx="320" cy="200" rx="8" ry="6" fill="white" opacity="0.4"/>
   
-  <!-- Brand text -->
-  <text x="256" y="450" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="white" text-anchor="middle" opacity="0.9">NOVADO</text>
+  <!-- Brand text with enhanced styling -->
+  <text x="256" y="460" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="white" text-anchor="middle" opacity="0.95">NOVADO</text>
+  
+  <!-- Subtle border -->
+  <rect width="512" height="512" rx="108" fill="none" stroke="white" stroke-width="2" opacity="0.1"/>
 </svg>

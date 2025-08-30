@@ -22,6 +22,7 @@ import {
   showValidationError 
 } from '@/lib/toast-helpers';
 import { regenerateAllSeoUrls } from '@/lib/seo';
+import { PushNotifications } from '@/components/PushNotifications';
 import { 
   Settings as SettingsIcon, 
   Save, 
@@ -888,6 +889,11 @@ export default function AdminSettings() {
                     </div>
                   </CardContent>
                 </Card>
+                
+                {/* Push уведомления */}
+                <PushNotifications onPermissionGranted={() => {
+                  showSuccessToast('Push-сповіщення', 'Успішно налаштовано push-сповіщення для адміністратора');
+                }} />
               </TabsContent>
 
               {/* Налаштування медіа */}

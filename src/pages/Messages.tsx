@@ -7,9 +7,11 @@ import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import { GradientAvatar } from '@/components/ui/gradient-avatar';
 import { toast } from '@/hooks/use-toast';
-import { Send, ArrowLeft, User, Circle } from 'lucide-react';
+import { Send, ArrowLeft, User, Circle, ShoppingCart, DollarSign, MessageCircle, Clock } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { uk } from 'date-fns/locale';
 import { useRealTimeMessages } from '@/components/RealTimeMessages';
@@ -22,443 +24,570 @@ interface Message {
   created_at: string;
   is_read: boolean;
   listing_id?: string;
+  message_type?: 'buying' | 'selling';
   listings?: {
     id: string;
     title: string;
+    price?: number;
   };
   sender?: {
     full_name?: string;
-    username?: string;
     avatar_url?: string;
+    last_seen?: string;
+    is_online?: boolean;
   };
   receiver?: {
     full_name?: string;
-    username?: string;
     avatar_url?: string;
+    last_seen?: string;
+    is_online?: boolean;
   };
 }
 
-interface Chat {
+interface Conversation {
   user_id: string;
   user_name: string;
-  username?: string;
-  avatar_url?: string;
+  user_avatar?: string;
   last_message: string;
   last_message_time: string;
   unread_count: number;
+  is_online: boolean;
   last_seen?: string;
+  message_type: 'buying' | 'selling';
+  listing_title?: string;
+  listing_price?: number;
 }
 
-export default function Messages() {
-  const { userId } = useParams();
+export function MessagesImproved() {
+  const { chatId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [chats, setChats] = useState<Chat[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [selectedChat, setSelectedChat] = useState<string | null>(userId || null);
   const [newMessage, setNewMessage] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [activeTab, setActiveTab] = useState<'buying' | 'selling'>('buying');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
-  // Enable real-time updates
-  useRealTimeMessages();
+  // Используем real-time обновления
+  useRealTimeMessages(chatId || '', (newMessage) => {
+    setMessages(prev => [...prev, newMessage]);
+    scrollToBottom();
+  });
 
-  useEffect(() => {
-    if (!user) {
-      navigate('/auth');
-      return;
-    }
-    
-    loadChats();
-    if (selectedChat) {
-      loadMessages(selectedChat);
-      markAsRead(selectedChat);
-    }
-  }, [selectedChat, user, navigate]);
-
-  // Auto scroll to bottom when messages change
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages]);
-
-  // Update user's last_seen when component mounts
-  useEffect(() => {
-    if (user) {
-      updateLastSeen();
-    }
-  }, [user]);
-
-  const loadChats = async () => {
+  // Загрузка списка собеседников
+  const loadConversations = async () => {
     if (!user) return;
-    
+
     try {
+      // Получаем все уникальные беседы пользователя
       const { data: messagesData, error } = await supabase
         .from('messages')
         .select(`
-          *,
-          sender_profiles:profiles!messages_sender_id_fkey(id, full_name, username, avatar_url, last_seen),
-          receiver_profiles:profiles!messages_receiver_id_fkey(id, full_name, username, avatar_url, last_seen),
-          listings(id, title)
+          id,
+          sender_id,
+          receiver_id,
+          content,
+          created_at,
+          is_read,
+          listing_id,
+          listings (
+            id,
+            title,
+            price,
+            user_id
+          ),
+          sender:sender_id (
+            id,
+            full_name,
+            avatar_url,
+            last_seen,
+            is_online
+          ),
+          receiver:receiver_id (
+            id,
+            full_name,
+            avatar_url,
+            last_seen,
+            is_online
+          )
         `)
         .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      // Group messages by chat
-      const chatMap = new Map<string, Chat>();
-      
-      messagesData?.forEach((msg: any) => {
-        const otherUserId = msg.sender_id === user.id ? msg.receiver_id : msg.sender_id;
-        const otherUser = msg.sender_id === user.id ? msg.receiver_profiles : msg.sender_profiles;
+      // Группируем сообщения по собеседникам
+      const conversationsMap = new Map<string, Conversation>();
+
+      messagesData?.forEach((message: any) => {
+        const isFromMe = message.sender_id === user.id;
+        const otherUserId = isFromMe ? message.receiver_id : message.sender_id;
+        const otherUser = isFromMe ? message.receiver : message.sender;
         
-        if (!chatMap.has(otherUserId)) {
-          chatMap.set(otherUserId, {
+        // Определяем тип сообщения (покупка/продажа)
+        let messageType: 'buying' | 'selling' = 'buying';
+        if (message.listing_id && message.listings) {
+          // Если объявление принадлежит текущему пользователю - это продажа
+          // Если объявление принадлежит другому пользователю - это покупка
+          messageType = message.listings.user_id === user.id ? 'selling' : 'buying';
+        }
+
+        const existingConv = conversationsMap.get(otherUserId);
+        
+        if (!existingConv || new Date(message.created_at) > new Date(existingConv.last_message_time)) {
+          conversationsMap.set(otherUserId, {
             user_id: otherUserId,
-            user_name: otherUser?.full_name || otherUser?.username || 'Користувач',
-            username: otherUser?.username,
-            avatar_url: otherUser?.avatar_url,
-            last_message: msg.content,
-            last_message_time: msg.created_at,
-            unread_count: !msg.is_read && msg.receiver_id === user.id ? 1 : 0,
+            user_name: otherUser?.full_name || 'Користувач',
+            user_avatar: otherUser?.avatar_url,
+            last_message: message.content,
+            last_message_time: message.created_at,
+            unread_count: isFromMe ? 0 : (message.is_read ? 0 : 1),
+            is_online: otherUser?.is_online || false,
             last_seen: otherUser?.last_seen,
+            message_type: messageType,
+            listing_title: message.listings?.title,
+            listing_price: message.listings?.price
           });
-        } else {
-          const chat = chatMap.get(otherUserId)!;
-          if (!msg.is_read && msg.receiver_id === user.id) {
-            chat.unread_count++;
-          }
         }
       });
 
-      setChats(Array.from(chatMap.values()));
+      setConversations(Array.from(conversationsMap.values()));
     } catch (error) {
-      console.error('Error loading chats:', error);
-    }
-  };
-
-  const loadMessages = async (otherUserId: string) => {
-    if (!user) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from('messages')
-        .select('*, listings(id, title)')
-        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${user.id})`)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-      setMessages(data || []);
-    } catch (error) {
-      console.error('Error loading messages:', error);
-    }
-  };
-
-  const markAsRead = async (otherUserId: string) => {
-    if (!user) return;
-    
-    await supabase
-      .from('messages')
-      .update({ is_read: true })
-      .eq('sender_id', otherUserId)
-      .eq('receiver_id', user.id);
-  };
-
-  const updateLastSeen = async () => {
-    if (!user) return;
-    
-    try {
-      await supabase.rpc('update_user_last_seen', { user_id: user.id });
-    } catch (error) {
-      console.error('Error updating last seen:', error);
-    }
-  };
-
-  const getOnlineStatus = (lastSeen?: string) => {
-    if (!lastSeen) return { text: 'Невідомо', color: 'text-gray-400', online: false };
-    
-    const lastSeenDate = new Date(lastSeen);
-    const now = new Date();
-    const diffInMinutes = Math.floor((now.getTime() - lastSeenDate.getTime()) / (1000 * 60));
-    
-    if (diffInMinutes < 5) {
-      return { text: 'Онлайн', color: 'text-green-500', online: true };
-    } else if (diffInMinutes < 60) {
-      return { text: `${diffInMinutes} хв тому`, color: 'text-yellow-500', online: false };
-    } else if (diffInMinutes < 1440) { // 24 hours
-      const hours = Math.floor(diffInMinutes / 60);
-      return { text: `${hours} год тому`, color: 'text-orange-500', online: false };
-    } else {
-      const days = Math.floor(diffInMinutes / 1440);
-      return { text: `${days} д тому`, color: 'text-gray-500', online: false };
-    }
-  };
-
-  const sendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newMessage.trim() || !selectedChat || !user) return;
-
-    setLoading(true);
-    try {
-      const { error } = await supabase
-        .from('messages')
-        .insert({
-          sender_id: user.id,
-          receiver_id: selectedChat,
-          content: newMessage.trim(),
-        });
-
-      if (error) throw error;
-
-      setNewMessage('');
-      loadMessages(selectedChat);
-      loadChats();
-      updateLastSeen(); // Update last seen when sending message
-    } catch (error) {
+      console.error('Error loading conversations:', error);
       toast({
         title: "Помилка",
-        description: "Не вдалося відправити повідомлення",
-        variant: "destructive",
+        description: "Не вдалося завантажити повідомлення",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
     }
   };
 
-  if (!user) {
-    return null;
-  }
+  // Загрузка сообщений конкретного чата
+  const loadChatMessages = async (otherUserId: string) => {
+    if (!user) return;
 
-  return (
-    <div className="min-h-screen bg-background">
-      <Header />
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .select(`
+          id,
+          sender_id,
+          receiver_id,
+          content,
+          created_at,
+          is_read,
+          listing_id,
+          listings (
+            id,
+            title,
+            price
+          ),
+          sender:sender_id (
+            full_name,
+            avatar_url,
+            is_online,
+            last_seen
+          )
+        `)
+        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${user.id})`)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      setMessages(data || []);
       
-      <div className="container mx-auto px-4 py-6">
-        <div className="bg-card rounded-lg shadow-lg h-[600px] md:h-[700px] flex flex-col md:flex-row">
-          {/* Chat List */}
-          <div className={`${selectedChat ? 'hidden md:flex' : 'flex'} md:w-1/3 border-b md:border-b-0 md:border-r flex-col`}>
-            <div className="p-3 md:p-4 border-b flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Повідомлення</h2>
-              {selectedChat && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelectedChat(null)}
-                  className="md:hidden"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                </Button>
+      // Отмечаем сообщения как прочитанные
+      await supabase
+        .from('messages')
+        .update({ is_read: true })
+        .eq('sender_id', otherUserId)
+        .eq('receiver_id', user.id);
+
+      setTimeout(scrollToBottom, 100);
+    } catch (error) {
+      console.error('Error loading chat messages:', error);
+    }
+  };
+
+  // Отправка сообщения
+  const sendMessage = async () => {
+    if (!newMessage.trim() || !chatId || !user || sending) return;
+
+    setSending(true);
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .insert({
+          sender_id: user.id,
+          receiver_id: chatId,
+          content: newMessage.trim(),
+          is_read: false
+        });
+
+      if (error) throw error;
+
+      setNewMessage('');
+      
+      // Перезагружаем сообщения
+      await loadChatMessages(chatId);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast({
+        title: "Помилка",
+        description: "Не вдалося відправити повідомлення",
+        variant: "destructive"
+      });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const scrollToBottom = () => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const getOnlineStatus = (isOnline: boolean, lastSeen?: string) => {
+    if (isOnline) {
+      return { text: 'онлайн', color: 'text-green-500', dot: 'bg-green-500' };
+    }
+    
+    if (lastSeen) {
+      const lastSeenDate = new Date(lastSeen);
+      const now = new Date();
+      const diffMinutes = Math.floor((now.getTime() - lastSeenDate.getTime()) / (1000 * 60));
+      
+      if (diffMinutes < 5) {
+        return { text: 'був нещодавно', color: 'text-orange-500', dot: 'bg-orange-500' };
+      } else if (diffMinutes < 60) {
+        return { text: `був ${diffMinutes} хв тому`, color: 'text-gray-500', dot: 'bg-gray-400' };
+      } else {
+        return { text: formatDistanceToNow(lastSeenDate, { addSuffix: true, locale: uk }), color: 'text-gray-500', dot: 'bg-gray-400' };
+      }
+    }
+    
+    return { text: 'був давно', color: 'text-gray-400', dot: 'bg-gray-300' };
+  };
+
+  const filteredConversations = conversations.filter(conv => conv.message_type === activeTab);
+
+  useEffect(() => {
+    loadConversations();
+  }, [user]);
+
+  useEffect(() => {
+    if (chatId) {
+      loadChatMessages(chatId);
+    }
+  }, [chatId, user]);
+
+  // Если выбран конкретный чат
+  if (chatId) {
+    const currentConversation = conversations.find(c => c.user_id === chatId);
+    const status = currentConversation ? getOnlineStatus(currentConversation.is_online, currentConversation.last_seen) : null;
+
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-6">
+          <div className="max-w-4xl mx-auto">
+            {/* Заголовок чата */}
+            <div className="flex items-center gap-4 mb-6 p-4 bg-card rounded-lg border">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => navigate('/messages')}
+                className="p-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
+              
+              <div 
+                className="flex items-center gap-3 flex-1 cursor-pointer hover:bg-muted/50 rounded-lg p-2 transition-colors"
+                onClick={() => navigate(`/profile/${chatId}`)}
+              >
+                <div className="relative">
+                  <GradientAvatar 
+                    name={currentConversation?.user_name || 'User'} 
+                    size="md"
+                    src={currentConversation?.user_avatar}
+                  />
+                  {status && (
+                    <div className={`absolute -bottom-1 -right-1 w-4 h-4 ${status.dot} rounded-full border-2 border-background`} />
+                  )}
+                </div>
+                <div>
+                  <h2 className="font-semibold">{currentConversation?.user_name || 'Користувач'}</h2>
+                  {status && (
+                    <p className={`text-xs ${status.color}`}>{status.text}</p>
+                  )}
+                </div>
+              </div>
+              
+              {currentConversation?.listing_title && (
+                <div className="text-right">
+                  <p className="text-sm font-medium">{currentConversation.listing_title}</p>
+                  {currentConversation.listing_price && (
+                    <p className="text-xs text-muted-foreground">{currentConversation.listing_price} UAH</p>
+                  )}
+                </div>
               )}
             </div>
-            <ScrollArea className="h-[530px]">
-              {chats.length > 0 ? (
-                chats.map((chat) => (
-                  <div
-                    key={chat.user_id}
-                    onClick={() => setSelectedChat(chat.user_id)}
-                    className={`p-4 border-b cursor-pointer hover:bg-muted/50 ${
-                      selectedChat === chat.user_id ? 'bg-muted' : ''
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="relative">
-                        <GradientAvatar
-                          src={chat.avatar_url}
-                          username={chat.user_name}
-                          size="md"
-                        />
-                        {/* Online indicator */}
-                        {getOnlineStatus(chat.last_seen).online && (
-                          <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-background rounded-full"></div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <p className="font-medium truncate">{chat.user_name}</p>
-                          {chat.unread_count > 0 && (
-                            <span className="bg-primary text-primary-foreground text-xs rounded-full px-2 py-1">
-                              {chat.unread_count}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Circle className={`w-2 h-2 ${getOnlineStatus(chat.last_seen).online ? 'text-green-500' : 'text-gray-400'} fill-current`} />
-                          <span className={`text-xs ${getOnlineStatus(chat.last_seen).color}`}>
-                            {getOnlineStatus(chat.last_seen).text}
-                          </span>
-                        </div>
-                        <p className="text-sm text-muted-foreground truncate">
-                          {chat.last_message}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {formatDistanceToNow(new Date(chat.last_message_time), {
-                            addSuffix: true,
-                            locale: uk,
-                          })}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="p-8 text-center text-muted-foreground">
-                  У вас поки немає повідомлень
-                </div>
-              )}
-            </ScrollArea>
-          </div>
 
-          {/* Chat Window */}
-          <div className={`${selectedChat ? 'flex' : 'hidden md:flex'} flex-1 flex-col`}>
-            {selectedChat ? (
-              <>
-                {/* Chat Header */}
-                <div className="p-3 md:p-4 border-b flex items-center gap-3">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setSelectedChat(null)}
-                    className="md:hidden"
-                  >
-                    <ArrowLeft className="w-5 h-5" />
-                  </Button>
-                  
-                  <div className="relative">
-                    <GradientAvatar
-                      src={chats.find(c => c.user_id === selectedChat)?.avatar_url}
-                      username={chats.find(c => c.user_id === selectedChat)?.user_name}
-                      size="md"
-                      onClick={async () => {
-                        try {
-                          const profileUrl = await import('@/lib/profileUtils').then(m => m.getProfileUrlForUser(selectedChat));
-                          navigate(profileUrl);
-                        } catch (error) {
-                          navigate(`/profile/${selectedChat}`);
-                        }
-                      }}
-                    />
-                    {/* Online indicator in header */}
-                    {(() => {
-                      const currentChat = chats.find(c => c.user_id === selectedChat);
-                      const status = getOnlineStatus(currentChat?.last_seen);
-                      return status.online && (
-                        <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-background rounded-full"></div>
-                      );
-                    })()}
-                  </div>
-                  
-                  <div className="flex-1 cursor-pointer" onClick={async () => {
-                    try {
-                      const profileUrl = await import('@/lib/profileUtils').then(m => m.getProfileUrlForUser(selectedChat));
-                      navigate(profileUrl);
-                    } catch (error) {
-                      navigate(`/profile/${selectedChat}`);
-                    }
-                  }}>
-                    <p className="font-medium hover:text-primary transition-colors">
-                      {chats.find(c => c.user_id === selectedChat)?.user_name || 'Користувач'}
-                    </p>
-                    <div className="flex items-center gap-1">
-                      {(() => {
-                        const currentChat = chats.find(c => c.user_id === selectedChat);
-                        const status = getOnlineStatus(currentChat?.last_seen);
-                        return (
-                          <>
-                            <Circle className={`w-2 h-2 ${status.online ? 'text-green-500' : 'text-gray-400'} fill-current`} />
-                            <span className={`text-xs ${status.color}`}>
-                              {status.text}
-                            </span>
-                          </>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Messages */}
-                <ScrollArea className="flex-1 p-4">
-                  <div className="space-y-4">
-                    {messages.map((message) => (
-                      <div key={message.id}>
-                        {message.listings && (
-                          <div className="flex justify-center mb-4">
-                            <div 
-                              onClick={async () => {
-                                try {
-                                  const { getOrCreateSeoUrl } = await import('@/lib/seo');
-                                  const seoUrl = await getOrCreateSeoUrl(message.listings.id, message.listings.title);
-                                  navigate(seoUrl);
-                                } catch (error) {
-                                  navigate(`/listing/${message.listings.id}`);
-                                }
-                              }}
-                              className="bg-muted/50 px-4 py-2 rounded-lg text-sm text-muted-foreground cursor-pointer hover:bg-muted"
-                            >
-                              Оголошення: {message.listings.title}
+            {/* Контейнер сообщений с прокруткой */}
+            <div className="bg-card rounded-lg border mb-6 flex flex-col h-[500px]">
+              {/* Сообщения */}
+              <ScrollArea className="flex-1 p-4" ref={messagesContainerRef}>
+                <div className="space-y-4">
+                  {messages.map((message) => {
+                    const isFromMe = message.sender_id === user?.id;
+                    return (
+                      <div
+                        key={message.id}
+                        className={`flex ${isFromMe ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div className={`max-w-[70%] ${isFromMe ? 'order-2' : 'order-1'}`}>
+                          {!isFromMe && (
+                            <div className="flex items-center gap-2 mb-1">
+                              <GradientAvatar 
+                                name={message.sender?.full_name || 'User'} 
+                                size="sm"
+                                src={message.sender?.avatar_url}
+                              />
+                              <span className="text-xs text-muted-foreground">
+                                {message.sender?.full_name || 'Користувач'}
+                              </span>
                             </div>
-                          </div>
-                        )}
-                        <div
-                          className={`flex ${
-                            message.sender_id === user.id ? 'justify-end' : 'justify-start'
-                          }`}
-                        >
+                          )}
                           <div
-                            className={`max-w-[70%] max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg rounded-lg p-3 break-words overflow-hidden word-wrap break-all ${
-                              message.sender_id === user.id
-                                ? 'bg-primary text-primary-foreground'
+                            className={`p-3 rounded-2xl ${
+                              isFromMe
+                                ? 'bg-primary text-primary-foreground ml-auto'
                                 : 'bg-muted'
                             }`}
                           >
-                            <p className="break-words whitespace-pre-wrap overflow-wrap-anywhere word-break-break-word">{message.content}</p>
-                          <p className="text-xs opacity-70 mt-1">
-                            {formatDistanceToNow(new Date(message.created_at), {
-                              addSuffix: true,
-                              locale: uk,
-                            })}
-                          </p>
-                        </div>
+                            <p className="text-sm">{message.content}</p>
+                            <p className={`text-xs mt-1 ${
+                              isFromMe ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                            }`}>
+                              {formatDistanceToNow(new Date(message.created_at), { 
+                                addSuffix: true, 
+                                locale: uk 
+                              })}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    ))}
-                    {/* Scroll anchor */}
-                    <div ref={messagesEndRef} />
-                  </div>
-                </ScrollArea>
+                    );
+                  })}
+                  <div ref={messagesEndRef} />
+                </div>
+              </ScrollArea>
 
-                {/* Input */}
-                <form onSubmit={sendMessage} className="p-3 md:p-4 border-t">
-                  <div className="flex gap-2">
-                    <Input
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      placeholder="Напишіть повідомлення..."
-                      disabled={loading}
-                      className="flex-1"
-                    />
-                    <Button 
-                      type="submit" 
-                      disabled={loading || !newMessage.trim()}
-                      size="icon"
-                      className="flex-shrink-0"
-                    >
-                      <Send className="w-4 h-4 md:w-5 md:h-5" />
-                    </Button>
-                  </div>
-                </form>
-              </>
-            ) : (
-              <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                Виберіть чат для початку спілкування
+              {/* Поле ввода */}
+              <div className="p-4 border-t">
+                <div className="flex gap-2">
+                  <Input
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    placeholder="Напишіть повідомлення..."
+                    onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+                    disabled={sending}
+                    className="flex-1"
+                  />
+                  <Button 
+                    onClick={sendMessage} 
+                    disabled={!newMessage.trim() || sending}
+                    size="sm"
+                  >
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
+        <Footer />
       </div>
+    );
+  }
 
+  // Главная страница сообщений со списком собеседников
+  return (
+    <div className="min-h-screen bg-background">
+      <Header />
+      <div className="container mx-auto px-4 py-6">
+        <div className="max-w-4xl mx-auto">
+          {/* Заголовок */}
+          <div className="flex items-center gap-4 mb-6">
+            <MessageCircle className="w-8 h-8 text-primary" />
+            <div>
+              <h1 className="text-2xl font-bold">Повідомлення</h1>
+              <p className="text-muted-foreground">Ваші розмови з покупцями та продавцями</p>
+            </div>
+          </div>
+
+          {/* Вкладки Покупка/Продажа */}
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'buying' | 'selling')}>
+            <TabsList className="grid w-full grid-cols-2 mb-6">
+              <TabsTrigger value="buying" className="flex items-center gap-2">
+                <ShoppingCart className="w-4 h-4" />
+                Купівля
+                {conversations.filter(c => c.message_type === 'buying').length > 0 && (
+                  <Badge variant="secondary" className="ml-2">
+                    {conversations.filter(c => c.message_type === 'buying').length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="selling" className="flex items-center gap-2">
+                <DollarSign className="w-4 h-4" />
+                Продаж
+                {conversations.filter(c => c.message_type === 'selling').length > 0 && (
+                  <Badge variant="secondary" className="ml-2">
+                    {conversations.filter(c => c.message_type === 'selling').length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Содержимое вкладок */}
+            <TabsContent value="buying" className="space-y-4">
+              <div className="text-sm text-muted-foreground mb-4">
+                💰 Розмови де ви хочете щось купити
+              </div>
+              {filteredConversations.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <ShoppingCart className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>Немає розмов про покупки</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {filteredConversations.map((conversation) => (
+                    <ConversationCard 
+                      key={conversation.user_id} 
+                      conversation={conversation} 
+                      onClick={() => navigate(`/messages/${conversation.user_id}`)}
+                    />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="selling" className="space-y-4">
+              <div className="text-sm text-muted-foreground mb-4">
+                🏪 Розмови де хочуть купити у вас
+              </div>
+              {filteredConversations.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <DollarSign className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>Немає розмов про продаж</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {filteredConversations.map((conversation) => (
+                    <ConversationCard 
+                      key={conversation.user_id} 
+                      conversation={conversation} 
+                      onClick={() => navigate(`/messages/${conversation.user_id}`)}
+                    />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
       <Footer />
     </div>
   );
+}
+
+// Компонент карточки собеседника (как в Telegram)
+function ConversationCard({ conversation, onClick }: { conversation: Conversation; onClick: () => void }) {
+  const status = getOnlineStatus(conversation.is_online, conversation.last_seen);
+  
+  return (
+    <div
+      onClick={onClick}
+      className="flex items-center gap-4 p-4 bg-card rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
+    >
+      {/* Аватар с индикатором онлайн */}
+      <div className="relative">
+        <GradientAvatar 
+          name={conversation.user_name} 
+          size="md"
+          src={conversation.user_avatar}
+        />
+        <div className={`absolute -bottom-1 -right-1 w-4 h-4 ${status.dot} rounded-full border-2 border-background`} />
+      </div>
+
+      {/* Информация о собеседнике */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="font-semibold truncate">{conversation.user_name}</h3>
+          <span className="text-xs text-muted-foreground">
+            {formatDistanceToNow(new Date(conversation.last_message_time), { 
+              addSuffix: true, 
+              locale: uk 
+            })}
+          </span>
+        </div>
+        
+        <p className="text-sm text-muted-foreground truncate mb-1">
+          {conversation.last_message}
+        </p>
+        
+        <div className="flex items-center justify-between">
+          <span className={`text-xs ${status.color} flex items-center gap-1`}>
+            <Circle className={`w-2 h-2 ${status.dot}`} />
+            {status.text}
+          </span>
+          
+          {conversation.unread_count > 0 && (
+            <Badge variant="default" className="bg-primary text-primary-foreground">
+              {conversation.unread_count}
+            </Badge>
+          )}
+        </div>
+        
+        {/* Информация об объявлении */}
+        {conversation.listing_title && (
+          <div className="mt-2 p-2 bg-muted/50 rounded text-xs">
+            <p className="font-medium truncate">{conversation.listing_title}</p>
+            {conversation.listing_price && (
+              <p className="text-muted-foreground">{conversation.listing_price} UAH</p>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function getOnlineStatus(isOnline: boolean, lastSeen?: string) {
+  if (isOnline) {
+    return { text: 'онлайн', color: 'text-green-500', dot: 'bg-green-500' };
+  }
+  
+  if (lastSeen) {
+    const lastSeenDate = new Date(lastSeen);
+    const now = new Date();
+    const diffMinutes = Math.floor((now.getTime() - lastSeenDate.getTime()) / (1000 * 60));
+    
+    if (diffMinutes < 5) {
+      return { text: 'був нещодавно', color: 'text-orange-500', dot: 'bg-orange-500' };
+    } else if (diffMinutes < 60) {
+      return { text: `був ${diffMinutes} хв тому`, color: 'text-gray-500', dot: 'bg-gray-400' };
+    } else {
+      return { text: formatDistanceToNow(lastSeenDate, { addSuffix: true, locale: uk }), color: 'text-gray-500', dot: 'bg-gray-400' };
+    }
+  }
+  
+  return { text: 'був давно', color: 'text-gray-400', dot: 'bg-gray-300' };
 }
