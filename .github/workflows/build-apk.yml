@@ -47,15 +47,12 @@ jobs:
         $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "build-tools;34.0.0"
         $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-34"
         
-    - name: 🧹 Clean cache and update manifest
+    - name: 🧹 Clean cache
       run: |
         # Принудительно очищаем Capacitor кеш
         rm -rf .capacitor/ android/
         
-        # Обновляем timestamp в манифесте для принудительного обновления PWA
-        sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"4.5.2-$(date +'%y%m%d%H%M')\"/g" public/manifest.json
-        
-        echo "✅ Кеш очищен, версия обновлена в манифесте"
+        echo "✅ Кеш очищен"
         
     - name: ⚙️ Create Android project
       run: |
@@ -77,23 +74,21 @@ jobs:
         
         echo "✅ Gradle wrapper updated to 8.2"
         
-    - name: 📝 Update version in build.gradle
+
+    - name: 🔍 Debug build.gradle
       run: |
-        cd android/app
+        echo "🔍 Проверяем структуру Android проекта..."
+        ls -la android/
         
-        # Обновляем versionCode (используем timestamp для уникальности)
-        NEW_VERSION_CODE=$(date +'%y%m%d%H%M')
-        sed -i "s/versionCode [0-9]*/versionCode $NEW_VERSION_CODE/g" build.gradle
-        
-        # Обновляем versionName
-        sed -i 's/versionName "[^"]*"/versionName "4.5.2"/g' build.gradle
-        
-        echo "✅ Версия обновлена:"
-        echo "   versionCode: $NEW_VERSION_CODE"
-        echo "   versionName: 4.5.2"
-        
-        # Показываем что изменилось
-        grep -n "versionCode\|versionName" build.gradle
+        echo "🔍 Проверяем android/app/build.gradle..."
+        if [ -f "android/app/build.gradle" ]; then
+          echo "✅ build.gradle найден"
+          echo "📄 Первые 20 строк build.gradle:"
+          head -20 android/app/build.gradle
+        else
+          echo "❌ build.gradle НЕ НАЙДЕН!"
+          ls -la android/app/
+        fi
         
     - name: 🏗️ Build APK
       run: |

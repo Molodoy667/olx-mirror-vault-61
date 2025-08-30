@@ -23,9 +23,7 @@ const config: CapacitorConfig = {
       style: 'default',
       backgroundColor: '#3B82F6'
     },
-    App: {
-      launchUrl: 'https://rvitgahgyioydzusrpvw.supabase.co'
-    },
+
     PushNotifications: {
       presentationOptions: ['badge', 'sound', 'alert']
     },
