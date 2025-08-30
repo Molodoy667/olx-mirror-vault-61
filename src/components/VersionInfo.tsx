@@ -4,12 +4,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Smartphone, Globe, Info } from 'lucide-react';
 
 export function VersionInfo() {
-  const packageVersion = "4.5.0";
+  const packageVersion = "4.5.2";
   const buildDate = new Date().toLocaleDateString('uk-UA');
   
   // Определяем тип приложения
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-  const isAndroidApp = window.navigator.userAgent.includes('Novado/4.5.0');
+  const isAndroidApp = window.navigator.userAgent.includes('Novado/4.5.2');
   const isPWA = 'serviceWorker' in navigator;
   
   const appType = isAndroidApp ? 'Android APK' : 
@@ -79,7 +79,7 @@ export function VersionInfo() {
         {isAndroidApp && (
           <div className="p-3 bg-green-50 dark:bg-green-950 rounded-lg border border-green-200 dark:border-green-800">
             <p className="text-sm text-green-700 dark:text-green-300 font-medium">
-              🎉 Ви використовуєте Android APK версію 4.5!
+              🎉 Ви використовуєте Android APK версію 4.5.2!
             </p>
             <p className="text-xs text-green-600 dark:text-green-400 mt-1">
               Всі функції доступні: splash screen, push-сповіщення, автооновлення

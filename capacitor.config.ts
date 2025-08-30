@@ -41,8 +41,8 @@ const config: CapacitorConfig = {
     allowMixedContent: true,
     captureInput: true,
     webContentsDebuggingEnabled: true,
-    appendUserAgent: 'Novado/4.5.0',
-    overrideUserAgent: 'Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 Novado/4.5.0',
+    appendUserAgent: 'Novado/4.5.2',
+    overrideUserAgent: 'Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 Novado/4.5.2',
     permissions: [
       'android.permission.INTERNET',
       'android.permission.ACCESS_NETWORK_STATE',

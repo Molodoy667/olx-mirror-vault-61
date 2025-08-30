@@ -85,6 +85,40 @@ const App = () => {
     setShowSplash(false);
   };
 
+  // Регистрация Service Worker для PWA автообновлений
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then((registration) => {
+          console.log('✅ Service Worker зарегистрирован:', registration);
+          
+          // Проверяем обновления каждые 30 секунд в Android приложении
+          const isAndroidApp = (window as any).Capacitor !== undefined;
+          if (isAndroidApp) {
+            setInterval(() => {
+              registration.update();
+            }, 30000);
+          }
+          
+          // Слушаем обновления
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            if (newWorker) {
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  // Новая версия доступна - перезагружаем
+                  window.location.reload();
+                }
+              });
+            }
+          });
+        })
+        .catch((error) => {
+          console.log('❌ Service Worker registration failed:', error);
+        });
+    }
+  }, []);
+
   if (showSplash) {
     return <SplashScreen onComplete={handleSplashComplete} duration={3000} />;
   }

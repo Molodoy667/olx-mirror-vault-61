@@ -47,6 +47,16 @@ jobs:
         $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "build-tools;34.0.0"
         $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-34"
         
+    - name: 🧹 Clean cache and update manifest
+      run: |
+        # Принудительно очищаем Capacitor кеш
+        rm -rf .capacitor/ android/
+        
+        # Обновляем timestamp в манифесте для принудительного обновления PWA
+        sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"4.5.2-$(date +'%y%m%d%H%M')\"/g" public/manifest.json
+        
+        echo "✅ Кеш очищен, версия обновлена в манифесте"
+        
     - name: ⚙️ Create Android project
       run: |
         npx cap add android
@@ -66,6 +76,24 @@ jobs:
         chmod +x gradlew
         
         echo "✅ Gradle wrapper updated to 8.2"
+        
+    - name: 📝 Update version in build.gradle
+      run: |
+        cd android/app
+        
+        # Обновляем versionCode (используем timestamp для уникальности)
+        NEW_VERSION_CODE=$(date +'%y%m%d%H%M')
+        sed -i "s/versionCode [0-9]*/versionCode $NEW_VERSION_CODE/g" build.gradle
+        
+        # Обновляем versionName
+        sed -i 's/versionName "[^"]*"/versionName "4.5.2"/g' build.gradle
+        
+        echo "✅ Версия обновлена:"
+        echo "   versionCode: $NEW_VERSION_CODE"
+        echo "   versionName: 4.5.2"
+        
+        # Показываем что изменилось
+        grep -n "versionCode\|versionName" build.gradle
         
     - name: 🏗️ Build APK
       run: |

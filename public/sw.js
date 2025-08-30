@@ -1,5 +1,5 @@
 // Service Worker для Novado PWA
-const CACHE_NAME = 'novado-v4.5.1';
+const CACHE_NAME = 'novado-v4.5.2';
 const urlsToCache = [
   '/',
   '/manifest.json',
@@ -8,16 +8,16 @@ const urlsToCache = [
 
 // Установка Service Worker
 self.addEventListener('install', (event) => {
-  console.log('🚀 Service Worker installing v4.5.1...');
+  console.log('🚀 Service Worker installing v4.5.2...');
   
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('📦 Opened cache v4.5.1');
+        console.log('📦 Opened cache v4.5.2');
         return cache.addAll(urlsToCache);
       })
       .then(() => {
-        console.log('✅ Service Worker v4.5.1 installed successfully');
+        console.log('✅ Service Worker v4.5.2 installed successfully');
         return self.skipWaiting(); // Принудительно активируем новую версию
       })
   );
