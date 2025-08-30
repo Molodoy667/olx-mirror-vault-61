@@ -21,6 +21,7 @@ import {
   showFileUploadError,
   showValidationError 
 } from '@/lib/toast-helpers';
+import { cleanupLocalStorage, getLocalStorageSize, formatBytes, getLocalStorageReport } from '@/lib/cleanup-storage';
 import { regenerateAllSeoUrls } from '@/lib/seo';
 import { PushNotifications } from '@/components/PushNotifications';
 import { VersionInfo } from '@/components/VersionInfo';
@@ -52,7 +53,10 @@ import {
   Languages,
   CreditCard,
   Search,
-  Users
+  Users,
+  HardDrive,
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
 
 interface SystemSettings {
@@ -409,6 +413,9 @@ export default function AdminSettings() {
   const [activeTab, setActiveTab] = useState('general');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [uploadingFile, setUploadingFile] = useState<string | null>(null);
+  const [storageSize, setStorageSize] = useState<number>(0);
+  const [storageReport, setStorageReport] = useState<{ key: string; size: number; sizeFormatted: string }[]>([]);
+  const [cleaningStorage, setCleaningStorage] = useState(false);
 
   // Функції валідації
   const validateEmail = (email: string): boolean => {
@@ -503,11 +510,40 @@ export default function AdminSettings() {
     return Object.keys(newErrors).length === 0;
   };
 
+  // Функции для работы с localStorage
+  const loadStorageReport = () => {
+    const size = getLocalStorageSize();
+    const report = getLocalStorageReport();
+    setStorageSize(size);
+    setStorageReport(report);
+  };
+
+  const handleCleanupStorage = async () => {
+    setCleaningStorage(true);
+    try {
+      const cleanedBytes = cleanupLocalStorage();
+      showSuccessToast(
+        'Кеш очищено', 
+        `Звільнено ${formatBytes(cleanedBytes)} місця`
+      );
+      loadStorageReport(); // Обновляем отчет
+    } catch (error) {
+      showErrorToast('Помилка', 'Не вдалося очистити кеш');
+    } finally {
+      setCleaningStorage(false);
+    }
+  };
+
   useEffect(() => {
     if (!loading && !isAdmin) {
       navigate('/');
     }
   }, [isAdmin, loading, navigate]);
+
+  // Загружаем отчет localStorage при монтировании
+  useEffect(() => {
+    loadStorageReport();
+  }, []);
 
   // Завантаження налаштувань з БД
   useEffect(() => {
@@ -762,6 +798,14 @@ export default function AdminSettings() {
                 >
                   <Palette className="w-6 h-6" />
                   <span className="text-sm font-medium">Вигляд</span>
+                </Button>
+                <Button
+                  variant={activeTab === "storage" ? "default" : "outline"}
+                  onClick={() => setActiveTab("storage")}
+                  className="h-auto p-4 flex flex-col items-center gap-2"
+                >
+                  <HardDrive className="w-6 h-6" />
+                  <span className="text-sm font-medium">Кеш</span>
                 </Button>
               </div>
 
@@ -1070,6 +1114,81 @@ export default function AdminSettings() {
                     <p className="text-muted-foreground">
                       Налаштування кольорової схеми та логотипу будуть додані в наступних версіях.
                     </p>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Управление кешем и localStorage */}
+              <TabsContent value="storage" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <HardDrive className="w-5 h-5" />
+                      Управління кешем та localStorage
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <AlertTriangle className="w-5 h-5 text-amber-600" />
+                        <h4 className="font-medium text-amber-800 dark:text-amber-200">
+                          Поточний розмір localStorage: {formatBytes(storageSize)}
+                        </h4>
+                      </div>
+                      <p className="text-sm text-amber-700 dark:text-amber-300">
+                        Якщо localStorage займає багато місця (>50MB), це може сповільнювати додаток.
+                      </p>
+                    </div>
+
+                    {storageReport.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="font-medium">Найбільші елементи кешу:</h4>
+                        <div className="space-y-1">
+                          {storageReport.slice(0, 10).map((item, index) => (
+                            <div key={index} className="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-800 rounded text-sm">
+                              <span className="font-mono text-xs">{item.key}</span>
+                              <span className="text-muted-foreground">{item.sizeFormatted}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex gap-3">
+                      <Button
+                        onClick={loadStorageReport}
+                        variant="outline"
+                        className="flex items-center gap-2"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                        Оновити звіт
+                      </Button>
+                      
+                      <Button
+                        onClick={handleCleanupStorage}
+                        disabled={cleaningStorage}
+                        variant="destructive"
+                        className="flex items-center gap-2"
+                      >
+                        {cleaningStorage ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                            Очищення...
+                          </>
+                        ) : (
+                          <>
+                            <Trash2 className="w-4 h-4" />
+                            Очистити кеш
+                          </>
+                        )}
+                      </Button>
+                    </div>
+
+                    <div className="text-xs text-muted-foreground">
+                      <p>• Очищення видалить всі бекапи та конфігурації з localStorage</p>
+                      <p>• Це не вплине на дані в базі даних</p>
+                      <p>• Рекомендується очищати кеш якщо він займає >10MB</p>
+                    </div>
                   </CardContent>
                 </Card>
               </TabsContent>

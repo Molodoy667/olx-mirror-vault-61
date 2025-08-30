@@ -12,6 +12,7 @@ import { Layout } from "@/components/Layout";
 import { lazyWithRetry } from "@/components/LazyRetry";
 import { DynamicRoute } from "@/components/DynamicRoute";
 import { SplashScreen } from "@/components/SplashScreen";
+import { AndroidPermissions } from "@/components/AndroidPermissions";
 
 // Lazy load all pages for better performance
 const Home = lazy(() => import("./pages/Home"));
@@ -127,6 +128,7 @@ const App = () => {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <Toaster />
+        <AndroidPermissions />
         <BrowserRouter>
           <AuthProvider>
             <ScrollToTopRouter />

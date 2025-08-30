@@ -117,20 +117,18 @@ export default function BackupManager() {
           }
         ];
         setBackupConfigs(defaultConfigs);
-        localStorage.setItem('backup-configs', JSON.stringify(defaultConfigs));
+        // НЕ сохраняем конфигурации в localStorage
       }
     } catch (error) {
       console.error('Error loading backup configs:', error);
     }
   };
 
-  // Завантаження списку бэкапів
+  // Завантаження списку бэкапів (БЕЗ localStorage)
   const loadBackups = async () => {
     try {
-      const savedBackups = localStorage.getItem('backup-list');
-      if (savedBackups) {
-        setBackups(JSON.parse(savedBackups));
-      }
+      // НЕ загружаем из localStorage - слишком много данных
+      setBackups([]);
     } catch (error) {
       console.error('Error loading backups:', error);
     }
@@ -224,7 +222,7 @@ export default function BackupManager() {
 
       const newBackups = [backup, ...backups];
       setBackups(newBackups);
-      localStorage.setItem('backup-list', JSON.stringify(newBackups));
+      // НЕ сохраняем в localStorage - слишком много данных!
 
       toast({
         title: "Бэкап сайту створено",
@@ -318,7 +316,7 @@ CREATE INDEX IF NOT EXISTS idx_listings_status ON listings(status);
 
       const newBackups = [backup, ...backups];
       setBackups(newBackups);
-      localStorage.setItem('backup-list', JSON.stringify(newBackups));
+      // НЕ сохраняем в localStorage - слишком много данных!
 
       toast({
         title: "Бэкап бази створено",
@@ -362,7 +360,7 @@ CREATE INDEX IF NOT EXISTS idx_listings_status ON listings(status);
 
       const newBackups = [backup, ...backups];
       setBackups(newBackups);
-      localStorage.setItem('backup-list', JSON.stringify(newBackups));
+      // НЕ сохраняем в localStorage - слишком много данных!
 
       toast({
         title: "Бэкап завантажено",
@@ -427,7 +425,7 @@ CREATE INDEX IF NOT EXISTS idx_listings_status ON listings(status);
     try {
       const newBackups = backups.filter(b => b.id !== backupId);
       setBackups(newBackups);
-      localStorage.setItem('backup-list', JSON.stringify(newBackups));
+      // НЕ сохраняем в localStorage - слишком много данных!
 
       toast({
         title: "Бэкап видалено",
@@ -485,7 +483,7 @@ CREATE INDEX IF NOT EXISTS idx_listings_status ON listings(status);
       c.type === editingConfigType ? editingConfig : c
     );
     setBackupConfigs(newConfigs);
-    localStorage.setItem('backup-configs', JSON.stringify(newConfigs));
+    // НЕ сохраняем конфигурации в localStorage
     setShowConfigModal(false);
     setEditingConfig(null);
 
