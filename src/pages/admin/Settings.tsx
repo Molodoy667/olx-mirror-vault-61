@@ -713,32 +713,57 @@ export default function AdminSettings() {
 
             {/* Вкладки налаштувань */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 w-full">
-                <TabsTrigger value="general" className="flex items-center gap-2">
-                  <Globe className="w-4 h-4" />
-                  <span className="hidden sm:inline">Загальні</span>
-                </TabsTrigger>
-                <TabsTrigger value="security" className="flex items-center gap-2">
-                  <Shield className="w-4 h-4" />
-                  <span className="hidden sm:inline">Безпека</span>
-                </TabsTrigger>
-                <TabsTrigger value="notifications" className="flex items-center gap-2">
-                  <Bell className="w-4 h-4" />
-                  <span className="hidden sm:inline">Сповіщення</span>
-                </TabsTrigger>
-                <TabsTrigger value="media" className="flex items-center gap-2">
-                  <FileImage className="w-4 h-4" />
-                  <span className="hidden sm:inline">Медіа</span>
-                </TabsTrigger>
-                <TabsTrigger value="seo" className="flex items-center gap-2">
-                  <Link className="w-4 h-4" />
-                  <span className="hidden sm:inline">SEO URL</span>
-                </TabsTrigger>
-                <TabsTrigger value="appearance" className="flex items-center gap-2">
-                  <Palette className="w-4 h-4" />
-                  <span className="hidden sm:inline">Вигляд</span>
-                </TabsTrigger>
-              </TabsList>
+              {/* Красивые кнопки вместо простых вкладок */}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+                <Button
+                  variant={activeTab === "general" ? "default" : "outline"}
+                  onClick={() => setActiveTab("general")}
+                  className="h-auto p-4 flex flex-col items-center gap-2"
+                >
+                  <Globe className="w-6 h-6" />
+                  <span className="text-sm font-medium">Загальні</span>
+                </Button>
+                <Button
+                  variant={activeTab === "security" ? "default" : "outline"}
+                  onClick={() => setActiveTab("security")}
+                  className="h-auto p-4 flex flex-col items-center gap-2"
+                >
+                  <Shield className="w-6 h-6" />
+                  <span className="text-sm font-medium">Безпека</span>
+                </Button>
+                <Button
+                  variant={activeTab === "notifications" ? "default" : "outline"}
+                  onClick={() => setActiveTab("notifications")}
+                  className="h-auto p-4 flex flex-col items-center gap-2"
+                >
+                  <Bell className="w-6 h-6" />
+                  <span className="text-sm font-medium">Сповіщення</span>
+                </Button>
+                <Button
+                  variant={activeTab === "media" ? "default" : "outline"}
+                  onClick={() => setActiveTab("media")}
+                  className="h-auto p-4 flex flex-col items-center gap-2"
+                >
+                  <FileImage className="w-6 h-6" />
+                  <span className="text-sm font-medium">Медіа</span>
+                </Button>
+                <Button
+                  variant={activeTab === "seo" ? "default" : "outline"}
+                  onClick={() => setActiveTab("seo")}
+                  className="h-auto p-4 flex flex-col items-center gap-2"
+                >
+                  <Link className="w-6 h-6" />
+                  <span className="text-sm font-medium">SEO URL</span>
+                </Button>
+                <Button
+                  variant={activeTab === "appearance" ? "default" : "outline"}
+                  onClick={() => setActiveTab("appearance")}
+                  className="h-auto p-4 flex flex-col items-center gap-2"
+                >
+                  <Palette className="w-6 h-6" />
+                  <span className="text-sm font-medium">Вигляд</span>
+                </Button>
+              </div>
 
               {/* Загальні налаштування */}
               <TabsContent value="general" className="space-y-6">
@@ -861,6 +886,79 @@ export default function AdminSettings() {
                       <Switch
                         checked={settings.maintenance_mode}
                         onCheckedChange={(checked) => handleSettingChange('maintenance_mode', checked)}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                {/* Додаткові налаштування */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <SettingsIcon className="w-5 h-5" />
+                      Додаткові налаштування
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="max-images">Максимум зображень на оголошення</Label>
+                        <Input
+                          id="max-images"
+                          type="number"
+                          min="1"
+                          max="20"
+                          value={settings.max_images_per_listing || 10}
+                          onChange={(e) => handleSettingChange('max_images_per_listing', parseInt(e.target.value))}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="max-price">Максимальна ціна оголошення (UAH)</Label>
+                        <Input
+                          id="max-price"
+                          type="number"
+                          min="1"
+                          value={settings.max_listing_price || 999999}
+                          onChange={(e) => handleSettingChange('max_listing_price', parseFloat(e.target.value))}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="listing-duration">Тривалість оголошення (днів)</Label>
+                        <Input
+                          id="listing-duration"
+                          type="number"
+                          min="1"
+                          max="365"
+                          value={settings.default_listing_duration || 30}
+                          onChange={(e) => handleSettingChange('default_listing_duration', parseInt(e.target.value))}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="featured-count">Кількість рекомендованих оголошень</Label>
+                        <Input
+                          id="featured-count"
+                          type="number"
+                          min="1"
+                          max="50"
+                          value={settings.featured_listings_count || 8}
+                          onChange={(e) => handleSettingChange('featured_listings_count', parseInt(e.target.value))}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label>Чат підтримки</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Увімкнути віджет чату для підтримки користувачів
+                        </p>
+                      </div>
+                      <Switch
+                        checked={settings.support_chat_enabled}
+                        onCheckedChange={(checked) => handleSettingChange('support_chat_enabled', checked)}
                       />
                     </div>
                   </CardContent>

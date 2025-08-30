@@ -5,7 +5,7 @@ import { AdminHeader } from '@/components/admin/AdminHeader';
 import { SQLFileManager } from '@/components/admin/SQLFileManager';
 import { DatabaseAnalyzer } from '@/components/admin/DatabaseAnalyzer';
 import { FullDatabaseManager } from '@/components/admin/FullDatabaseManager';
-import { FunctionsManager } from '@/components/admin/FunctionsManager';
+
 
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -54,7 +54,7 @@ interface TableInfo {
 
 export default function SQLManager() {
   const { isAdmin, isLoading: adminLoading } = useAdmin();
-  const [activeTab, setActiveTab] = useState<'sql-editor' | 'database-manager' | 'file-manager' | 'analyzer' | 'functions'>('database-manager');
+  const [activeTab, setActiveTab] = useState<'sql-editor' | 'database-manager' | 'file-manager' | 'analyzer'>('database-manager');
   const [sqlQuery, setSqlQuery] = useState('');
   const [isExecuting, setIsExecuting] = useState(false);
   const [results, setResults] = useState<SQLResult[]>([]);
@@ -536,21 +536,6 @@ export default function SQLManager() {
                 <span className="sm:hidden">Аналіз</span>
               </div>
             </button>
-            <button
-              onClick={() => setActiveTab('functions')}
-              className={`flex-shrink-0 py-2 sm:py-3 px-2 sm:px-4 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
-                activeTab === 'functions'
-                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-              }`}
-            >
-              <div className="flex items-center space-x-1 sm:space-x-2">
-                <FileCode className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="hidden sm:inline">Функції</span>
-                <span className="sm:hidden">Func</span>
-              </div>
-            </button>
-
           </nav>
         </div>
 
@@ -946,9 +931,7 @@ export default function SQLManager() {
           />
         )}
 
-        {activeTab === 'functions' && (
-          <FunctionsManager />
-        )}
+
 
       </div>
     </div>

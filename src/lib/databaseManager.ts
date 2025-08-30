@@ -208,44 +208,51 @@ export const databaseManager = {
   // Отримання всіх функцій БД
   async getAllFunctions(): Promise<FunctionInfo[]> {
     try {
-      // Спочатку пробуємо RPC функцію
-      const { data, error } = await supabase
-        .rpc('get_all_functions');
+      // Використовуємо exec_sql для отримання функцій
+      const { data, error } = await supabase.rpc('exec_sql', {
+        query: `
+          SELECT 
+            p.proname as function_name,
+            CASE p.prokind 
+              WHEN 'f' THEN 'function'
+              WHEN 'p' THEN 'procedure'
+              WHEN 'a' THEN 'aggregate'
+              WHEN 'w' THEN 'window'
+              ELSE 'unknown'
+            END as function_type,
+            pg_get_function_result(p.oid) as return_type,
+            pg_get_function_arguments(p.oid) as arguments,
+            l.lanname as language,
+            pg_get_functiondef(p.oid) as source_code,
+            r.rolname as owner,
+            obj_description(p.oid, 'pg_proc') as description
+          FROM pg_proc p
+          JOIN pg_namespace n ON p.pronamespace = n.oid
+          JOIN pg_language l ON p.prolang = l.oid
+          JOIN pg_roles r ON p.proowner = r.oid
+          WHERE n.nspname = 'public'
+          AND p.prokind IN ('f', 'p')
+          ORDER BY p.proname;
+        `
+      });
 
-      if (data && !error) {
-        return data;
-      }
-
-      console.warn('RPC get_all_functions недоступна, використовуємо fallback');
-      
-      // Fallback: простий запит до information_schema
-      const { data: fallbackData, error: fallbackError } = await supabase
-        .from('information_schema.routines')
-        .select(`
-          routine_name,
-          routine_type,
-          data_type,
-          routine_definition
-        `)
-        .eq('routine_schema', 'public')
-        .not('routine_name', 'like', 'pg_%');
-
-      if (fallbackError) {
-        console.error('Fallback помилка отримання функцій:', fallbackError);
-        // Повертаємо пустий масив замість помилки
+      if (error) {
+        console.error('Помилка отримання функцій через exec_sql:', error);
         return [];
       }
 
-      // Перетворюємо fallback дані у правильний формат
-      return (fallbackData || []).map((func: any) => ({
-        function_name: func.routine_name || 'Unknown',
-        function_type: func.routine_type?.toLowerCase() || 'function',
-        return_type: func.data_type || 'void',
-        arguments: '',
-        language: 'sql',
-        source_code: func.routine_definition || 'Код недоступний',
-        owner: 'public',
-        description: `${func.routine_type}: ${func.routine_name}`
+      // Обрабатываем результат exec_sql
+      const functionsData = Array.isArray(data) ? data : (data?.result || []);
+      
+      return functionsData.map((func: any) => ({
+        function_name: func.function_name || 'Unknown',
+        function_type: func.function_type || 'function',
+        return_type: func.return_type || 'void',
+        arguments: func.arguments || '',
+        language: func.language || 'sql',
+        source_code: func.source_code || 'Код недоступний',
+        owner: func.owner || 'public',
+        description: func.description || `${func.function_type}: ${func.function_name}`
       }));
 
     } catch (error) {
