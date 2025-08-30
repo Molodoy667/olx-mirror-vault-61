@@ -23,6 +23,8 @@ import {
 } from '@/lib/toast-helpers';
 import { regenerateAllSeoUrls } from '@/lib/seo';
 import { PushNotifications } from '@/components/PushNotifications';
+import { VersionInfo } from '@/components/VersionInfo';
+import { AppUpdateButton } from '@/components/AppUpdateButton';
 import { 
   Settings as SettingsIcon, 
   Save, 
@@ -894,6 +896,12 @@ export default function AdminSettings() {
                 <PushNotifications onPermissionGranted={() => {
                   showSuccessToast('Push-сповіщення', 'Успішно налаштовано push-сповіщення для адміністратора');
                 }} />
+                
+                {/* Кнопка обновления */}
+                <AppUpdateButton />
+                
+                {/* Информация о версии */}
+                <VersionInfo />
               </TabsContent>
 
               {/* Налаштування медіа */}
