@@ -62,7 +62,17 @@ export const SearchSuggestions = ({ query, onSuggestionClick, isVisible }: Searc
   const saveRecentSearch = async (searchQuery: string) => {
     const updated = [searchQuery, ...recentSearches.filter(s => s !== searchQuery)].slice(0, 5);
     setRecentSearches(updated);
-    localStorage.setItem('recentSearches', JSON.stringify(updated));
+    
+    // Проверяем размер перед сохранением
+    const dataToSave = JSON.stringify(updated);
+    if (new Blob([dataToSave]).size > 20 * 1024) { // Больше 20KB
+      // Ограничиваем до 3 элементов если данные слишком большие
+      const limited = updated.slice(0, 3);
+      setRecentSearches(limited);
+      localStorage.setItem('recentSearches', JSON.stringify(limited));
+    } else {
+      localStorage.setItem('recentSearches', dataToSave);
+    }
 
     // Отслеживаем поиск в статистике
     try {

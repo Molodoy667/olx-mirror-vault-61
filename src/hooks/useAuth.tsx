@@ -31,9 +31,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(session?.user ?? null);
         setLoading(false);
         
-        // Збереження сесії в localStorage та cookies
+        // Збереження сесії в localStorage та cookies (оптимізовано)
         if (session) {
-          localStorage.setItem('novado_session', JSON.stringify(session));
+          // Зберігаємо тільки необхідні дані для економії місця
+          const sessionData = {
+            user: {
+              id: session.user.id,
+              email: session.user.email
+            },
+            expires_at: session.expires_at
+          };
+          localStorage.setItem('novado_session', JSON.stringify(sessionData));
           document.cookie = `novado_user=${session.user.id}; path=/; max-age=${7 * 24 * 60 * 60}; secure; samesite=strict`;
         } else {
           localStorage.removeItem('novado_session');
