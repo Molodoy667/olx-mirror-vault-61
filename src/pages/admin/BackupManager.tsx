@@ -217,7 +217,7 @@ export default function BackupManager() {
         completed_at: new Date().toISOString(),
         checksum: `sha256-${Math.random().toString(36).substring(2)}`,
         version: '1.0.0',
-        data: siteContent // Зберігаємо реальні дані
+        data: null // Не зберігаємо дані в пам'яті для економії місця
       };
 
       const newBackups = [backup, ...backups];
@@ -311,7 +311,7 @@ CREATE INDEX IF NOT EXISTS idx_listings_status ON listings(status);
         completed_at: new Date().toISOString(),
         checksum: `sha256-${Math.random().toString(36).substring(2)}`,
         version: '1.0.0',
-        data: dbData // Зберігаємо реальні дані
+        data: null // Не зберігаємо дані в пам'яті для економії місця
       };
 
       const newBackups = [backup, ...backups];

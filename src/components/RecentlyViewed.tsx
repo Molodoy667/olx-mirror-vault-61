@@ -12,8 +12,11 @@ export function RecentlyViewed() {
     // Get recently viewed items from localStorage
     const recentlyViewed = JSON.parse(localStorage.getItem('recentlyViewed') || '[]');
     
-    if (recentlyViewed.length > 0) {
-      loadViewedListings(recentlyViewed);
+    // Ограничиваем до 8 элементов для экономии места
+    const limitedItems = recentlyViewed.slice(0, 8);
+    
+    if (limitedItems.length > 0) {
+      loadViewedListings(limitedItems);
     } else {
       setLoading(false);
     }
